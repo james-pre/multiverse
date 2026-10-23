@@ -19,8 +19,8 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "tsc -p tsconfig.json --noEmit && eslint src",
-		"build": "tsc -p tsconfig.json",
+		"lint": "tsc -p tsconfig.json --noEmit && tsc -p src/gui/tsconfig.json --noEmit && eslint src",
+		"build": "tsc -p tsconfig.json && tsc -p src/gui/tsconfig.json",
 		"build:native": "girbind build",
 		"test": "tsx --test tests/*.test.ts",
 		"start": "node dist/main.js"
@@ -35,70 +35,19 @@
 		"experimentalOperatorPosition": "start"
 	},
 	"girbindDependencies": [
-		{
-			"name": "gtk",
-			"gir": "/usr/share/gir-1.0/Gtk-4.0.gir",
-			"include": [
-				"gtk/gtk.h"
-			],
-			"pkgConfig": [
-				"gtk4"
-			]
-		},
-		{
-			"name": "adw",
-			"gir": "/usr/share/gir-1.0/Adw-1.gir",
-			"include": [
-				"adwaita.h"
-			],
-			"pkgConfig": [
-				"libadwaita-1"
-			]
-		},
-		{
-			"name": "gsk",
-			"gir": "/usr/share/gir-1.0/Gsk-4.0.gir",
-			"include": [
-				"gtk/gtk.h"
-			],
-			"pkgConfig": [
-				"gtk4"
-			]
-		},
-		{
-			"name": "gdk",
-			"gir": "/usr/share/gir-1.0/Gdk-4.0.gir",
-			"include": [
-				"gtk/gtk.h"
-			],
-			"pkgConfig": [
-				"gtk4"
-			]
-		},
-		{
-			"name": "graphene",
-			"gir": "/usr/share/gir-1.0/Graphene-1.0.gir",
-			"include": [
-				"graphene.h"
-			],
-			"pkgConfig": [
-				"graphene-1.0"
-			]
-		},
-		{
-			"name": "pango",
-			"gir": "/usr/share/gir-1.0/Pango-1.0.gir",
-			"include": [
-				"pango/pango.h"
-			],
-			"pkgConfig": [
-				"pango"
-			]
-		}
+		"gio",
+		"graphene",
+		"pango",
+		"gdk",
+		"gsk",
+		"gtk",
+		"adw"
 	],
 	"dependencies": {
 		"commander": "^15.0.0",
+		"girbind": "^0.3.1",
 		"ioium": "^1.11.1",
+		"utilium": "^3.10.0",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
@@ -106,7 +55,7 @@
 		"@eslint/js": "^10.0.1",
 		"@types/node": "^26.6.5",
 		"eslint": "^10.13.0",
-		"girbind": "^0.1.3",
+		"girbind-devel": "^0.3.1",
 		"globals": "^17.13.0",
 		"prettier": "^3.9.10",
 		"tsx": "^4.23.15",
