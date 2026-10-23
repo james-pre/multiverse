@@ -4,6 +4,6 @@
 		"rootDir": "..",
 		"noEmit": true
 	},
-	"include": ["./**/*.ts", "../src/**/*.ts"],
+	"include": ["./**/*.ts", "../src/**/*.ts", "../src/.*.ts"],
 	"exclude": ["../src/gui"]
 }

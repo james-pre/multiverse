@@ -1,0 +1,42 @@
+{
+	"app": {
+		"title": "Save Timeline"
+	},
+	"common": {
+		"yes": "Yes",
+		"no": "No"
+	},
+	"play_time": "{hours}h {minutes}m",
+	"card": {
+		"empty": "Hover over a save to see its details",
+		"separator": "  ·  "
+	},
+	"action": {
+		"open": "Open Folder",
+		"delete": "Delete",
+		"done": "{action}: {name}"
+	},
+	"delete": {
+		"heading": "Delete {name}?",
+		"body": "“{label}” will be moved to the trash. Steam Cloud may remove it from the cloud too.",
+		"cancel": "Cancel",
+		"confirm": "Move to Trash",
+		"done": "Moved {name} to the trash"
+	},
+	"cyberpunk": {
+		"playthrough": "{life_path} · Level {level}",
+		"level": "Level {level}",
+		"make_manual": "Make Manual",
+		"life_path": {
+			"Corporate": "Corpo",
+			"StreetKid": "Streetkid",
+			"Nomad": "Nomad"
+		},
+		"detail": {
+			"street_cred": "Street cred",
+			"difficulty": "Difficulty",
+			"patch": "Patch",
+			"modded": "Modded"
+		}
+	}
+}

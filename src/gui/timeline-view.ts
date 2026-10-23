@@ -1,13 +1,14 @@
-import { connect } from 'girbind';
+import { connect, disconnect } from 'girbind';
 import * as Adw from '../../native/adw.js';
 import * as Gdk from '../../native/gdk.js';
 import * as Graphene from '../../native/graphene.js';
 import * as Gsk from '../../native/gsk.js';
 import * as Gtk from '../../native/gtk.js';
-import { duration } from 'utilium/format';
+import * as Pango from '../../native/pango.js';
 import { layoutTimeline } from '../layout.js';
 import type { Timeline, TimelineNode } from '../timeline.js';
 import { Viewport, type Point } from '../viewport.js';
+import { escapeMarkup, hoursAndMinutes } from './format.js';
 
 const kindColors: Record<string, string> = {
 	manual: '#3584e4',
@@ -15,6 +16,18 @@ const kindColors: Record<string, string> = {
 	quick: '#33d17a',
 	'point of no return': '#e66100',
 	'end game': '#c01c28',
+};
+
+/** Pango units per pixel */
+const pangoScale = 1024;
+
+const card = {
+	width: 240,
+	padding: 8,
+	imageHeight: 135,
+	textHeight: 40,
+	radius: 12,
+	offset: 16,
 };
 
 function rgba(spec: string): Gdk.RGBA {
@@ -27,18 +40,69 @@ function point({ x, y }: Point): Graphene.Point {
 	return new Graphene.Point().init(x, y);
 }
 
-/** Draws one timeline and handles zooming, panning and hovering over it. */
+function rect(x: number, y: number, width: number, height: number): Graphene.Rect {
+	return new Graphene.Rect().init(x, y, width, height);
+}
+
+function rounded(bounds: Graphene.Rect, radius: number): Gsk.RoundedRect {
+	return new Gsk.RoundedRect().initFromRect(bounds, radius);
+}
+
+export interface Palette {
+	foreground: Gdk.RGBA;
+	branch: Gdk.RGBA;
+	card: Gdk.RGBA;
+	shadow: Gdk.RGBA;
+	accent: Gdk.RGBA;
+}
+
+/** Colors for drawing over `widget`, following its theme. */
+export function palette(widget: Gtk.Widget): Palette {
+	const styles = Adw.StyleManager.getDefault();
+	const dark = styles.getDark();
+	const foreground = widget.getColor();
+	const branch = foreground.copy();
+	branch.alpha *= 0.6;
+	return {
+		foreground,
+		branch,
+		card: rgba(dark ? '#36363a' : '#ffffff'),
+		shadow: rgba(dark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 6, 0.25)'),
+		accent: styles.getAccentColorRgba(),
+	};
+}
+
+/** Draws one timeline and handles zooming, panning, hovering and selecting saves on it. */
 export class TimelineView {
 	public readonly widget = new Gtk.Picture();
-	protected readonly viewport: Viewport;
-	protected hovered?: TimelineNode;
-	protected pointer: Point = { x: 0, y: 0 };
-	protected dragged: Point = { x: 0, y: 0 };
+	public viewport: Viewport;
 
-	public constructor(public readonly timeline: Timeline) {
+	public hovered?: TimelineNode;
+	public selected?: TimelineNode;
+
+	public onHover?: (node: TimelineNode | undefined) => void;
+	public onSelect?: (node: TimelineNode | undefined) => void;
+	public onContextMenu?: (node: TimelineNode, position: Point) => void;
+
+	protected pointer: Point = { x: 0, y: 0 };
+	protected dragged = 0;
+	protected screenshots = new Map<string, Gdk.Texture | null>();
+
+	public constructor(public timeline: Timeline) {
 		this.viewport = new Viewport(layoutTimeline(timeline));
 		this.widget.setHexpand(true);
 		this.widget.setVexpand(true);
+
+		let layoutHandler = 0;
+		connect(this.widget, 'realize', () => {
+			const clock = this.widget.getFrameClock();
+			if (clock) layoutHandler = connect(clock, 'layout', () => this.fitToWidget(), { after: true });
+		});
+		connect(this.widget, 'unrealize', () => {
+			const clock = this.widget.getFrameClock();
+			if (clock && layoutHandler) disconnect(clock, layoutHandler);
+			layoutHandler = 0;
+		});
 
 		const motion = new Gtk.EventControllerMotion();
 		connect(motion, 'motion', (_, x, y) => {
@@ -47,64 +111,100 @@ export class TimelineView {
 		});
 		connect(motion, 'leave', () => this.hover(undefined));
 
-		const scroll = new Gtk.EventControllerScroll(Gtk.EventControllerScrollFlags.vertical);
-		connect(scroll, 'scroll', (_, _x, y) => {
-			this.viewport.zoom(Math.pow(1.1, -y), this.pointer.x);
+		const scroll = new Gtk.EventControllerScroll(Gtk.EventControllerScrollFlags.both_axes);
+		connect(scroll, 'scroll', (_, x, y) => {
+			if (y) this.viewport.zoom(Math.pow(1.1, -y), this.pointer.x);
+			if (x) this.viewport.pan(-x * 20);
 			this.render();
 			return true;
 		});
 
 		const drag = new Gtk.GestureDrag();
-		connect(drag, 'drag-begin', () => (this.dragged = { x: 0, y: 0 }));
-		connect(drag, 'drag-update', (_, x, y) => {
-			this.viewport.pan(x - this.dragged.x, y - this.dragged.y);
-			this.dragged = { x, y };
+		connect(drag, 'drag-begin', () => (this.dragged = 0));
+		connect(drag, 'drag-update', (_, x) => {
+			this.viewport.pan(x - this.dragged);
+			this.dragged = x;
 			this.render();
 		});
 
-		for (const controller of [motion, scroll, drag]) this.widget.addController(controller);
+		const click = new Gtk.GestureClick();
+		click.setButton(0);
+		connect(click, 'pressed', (self, _, x, y) => {
+			const node = this.viewport.hitTest(x, y);
+			if (self.getCurrentButton() == 3) {
+				if (node) this.onContextMenu?.(node, { x, y });
+				return;
+			}
+			if (!node || node === this.selected) return;
+			this.selected = node;
+			this.onSelect?.(node);
+			this.render();
+		});
+
+		for (const controller of [motion, scroll, drag, click]) this.widget.addController(controller);
+	}
+
+	/** Show an updated version of the timeline, keeping the zoom, hover and selection. */
+	public setTimeline(timeline: Timeline): void {
+		const previous = this.viewport;
+		this.timeline = timeline;
+		this.viewport = new Viewport(layoutTimeline(timeline));
+		if (previous.width) {
+			this.viewport.resize(previous.width, previous.height);
+			this.viewport.match(previous);
+		}
+		this.hovered = this.hovered && timeline.find(this.hovered.save.id);
+		this.selected = this.selected && timeline.find(this.selected.save.id);
+		this.render();
+	}
+
+	protected fitToWidget(): void {
+		if (!this.widget.getMapped()) return;
+		const width = this.widget.getWidth();
+		const height = this.widget.getHeight();
+		if (width == this.viewport.width && height == this.viewport.height) return;
+		this.viewport.resize(width, height);
+		this.render();
 	}
 
 	protected hover(node: TimelineNode | undefined): void {
 		if (node === this.hovered) return;
 		this.hovered = node;
+		this.onHover?.(node);
 		this.render();
 	}
 
 	public render(): void {
-		const width = this.widget.getWidth();
-		const height = this.widget.getHeight();
+		const { width, height } = this.viewport;
 		if (!width || !height) return;
-		if (!this.viewport.width) this.viewport.fit(width, height);
-		this.viewport.width = width;
-		this.viewport.height = height;
 
-		const foreground = rgba(Adw.StyleManager.getDefault().getDark() ? '#ffffff' : '#000000');
+		const colors = palette(this.widget);
 		const snapshot = new Gtk.Snapshot();
-		this.drawBranches(snapshot, foreground);
-		this.drawSaves(snapshot);
-		if (this.hovered) this.drawLabel(snapshot, this.hovered, foreground);
+		this.drawBranches(snapshot, colors);
+		this.drawSaves(snapshot, colors);
+		if (this.hovered) this.drawCard(snapshot, this.hovered, colors);
 
 		this.widget.setPaintable(snapshot.toPaintable(new Graphene.Size().init(width, height)));
 	}
 
-	protected drawBranches(snapshot: Gtk.Snapshot, color: Gdk.RGBA): void {
+	protected drawBranches(snapshot: Gtk.Snapshot, colors: Palette): void {
 		const builder = new Gsk.PathBuilder();
 		for (const node of this.timeline.nodes) {
 			if (!node.parent) continue;
 			const from = this.viewport.position(node.parent);
 			const to = this.viewport.position(node);
 			builder.moveTo(from.x, from.y);
-			if (from.y != to.y) {
-				const bend = Math.min(this.viewport.laneHeight, to.x - from.x);
+			const bend = Math.min(this.viewport.laneHeight, to.x - from.x);
+			// GSK drops cubics narrower than about a pixel, so near-vertical branches are drawn straight.
+			if (from.y != to.y && bend >= 1) {
 				builder.cubicTo(from.x + bend / 2, from.y, from.x + bend / 2, to.y, from.x + bend, to.y);
 			}
 			builder.lineTo(to.x, to.y);
 		}
-		snapshot.appendStroke(builder.toPath(), new Gsk.Stroke(2), color);
+		snapshot.appendStroke(builder.toPath(), new Gsk.Stroke(2), colors.branch);
 	}
 
-	protected drawSaves(snapshot: Gtk.Snapshot): void {
+	protected drawSaves(snapshot: Gtk.Snapshot, colors: Palette): void {
 		const nodesByKind = Map.groupBy(this.timeline.nodes, node => node.save.kind);
 		for (const [kind, nodes] of nodesByKind) {
 			const builder = new Gsk.PathBuilder();
@@ -114,17 +214,59 @@ export class TimelineView {
 			}
 			snapshot.appendFill(builder.toPath(), Gsk.FillRule.winding, rgba(kindColors[kind] ?? '#77767b'));
 		}
+
+		if (!this.selected) return;
+		const ring = new Gsk.PathBuilder();
+		ring.addCircle(point(this.viewport.position(this.selected)), this.viewport.nodeRadius * 1.5 + 3);
+		snapshot.appendStroke(ring.toPath(), new Gsk.Stroke(2), colors.accent);
 	}
 
-	protected drawLabel(snapshot: Gtk.Snapshot, node: TimelineNode, color: Gdk.RGBA): void {
+	protected screenshot(path: string | undefined): Gdk.Texture | null {
+		if (!path) return null;
+		if (!this.screenshots.has(path)) {
+			try {
+				this.screenshots.set(path, Gdk.Texture.newFromFilename(path));
+			} catch {
+				this.screenshots.set(path, null);
+			}
+		}
+		return this.screenshots.get(path)!;
+	}
+
+	/** Draws a card with the save's screenshot next to the node, kept inside the view. */
+	protected drawCard(snapshot: Gtk.Snapshot, node: TimelineNode, colors: Palette): void {
 		const { save } = node;
-		const text = `${save.name}  ${duration(save.playTime)}\n${save.label}`;
+		const { width, height } = this.viewport;
 		const position = this.viewport.position(node);
+		const texture = this.screenshot(save.screenshot);
+
+		const imageHeight = texture ? card.imageHeight + card.padding : 0;
+		const cardHeight = card.padding * 2 + imageHeight + card.textHeight;
+		const fitsRight = position.x + card.offset + card.width <= width - card.padding;
+		const x = fitsRight ? position.x + card.offset : position.x - card.offset - card.width;
+		const y = Math.max(card.padding, Math.min(position.y - cardHeight / 2, height - cardHeight - card.padding));
+
+		const bounds = rect(x, y, card.width, cardHeight);
+		snapshot.appendOutsetShadow(rounded(bounds, card.radius), colors.shadow, 0, 2, 0, 8);
+		snapshot.pushRoundedClip(rounded(bounds, card.radius));
+		snapshot.appendColor(colors.card, bounds);
+		snapshot.pop();
+
+		const inner = card.width - card.padding * 2;
+		if (texture) {
+			const image = rect(x + card.padding, y + card.padding, inner, card.imageHeight);
+			snapshot.pushRoundedClip(rounded(image, card.radius - card.padding / 2));
+			snapshot.appendTexture(texture, image);
+			snapshot.pop();
+		}
+
+		const text = this.widget.createPangoLayout(null);
+		text.setMarkup(`<b>${escapeMarkup(save.label || save.name)}</b>\n${hoursAndMinutes(save.playTime)}`, -1);
+		text.setWidth(inner * pangoScale);
+		text.setEllipsize(Pango.EllipsizeMode.end);
 		snapshot.save();
-		snapshot.translate(
-			point({ x: position.x + this.viewport.nodeRadius * 2, y: position.y + this.viewport.nodeRadius })
-		);
-		snapshot.appendLayout(this.widget.createPangoLayout(text), color);
+		snapshot.translate(point({ x: x + card.padding, y: y + card.padding + imageHeight }));
+		snapshot.appendLayout(text, colors.foreground);
 		snapshot.restore();
 	}
 }

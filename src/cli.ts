@@ -4,7 +4,8 @@ import { existsSync } from 'node:fs';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
-import { games, getGame } from './games/index.js';
+import { defaultDataDirectory, installEntry, uninstallEntry } from './desktop.js';
+import { games, getGame, type Game } from './games/index.js';
 import { Timeline } from './timeline.js';
 
 interface ScanOptions {
@@ -12,11 +13,15 @@ interface ScanOptions {
 	directory?: string;
 }
 
-function loadTimelines(options: ScanOptions): Timeline[] {
+function resolve(options: ScanOptions): { game: Game; directory: string } {
 	const game = getGame(options.game);
 	const directory = options.directory ?? game.defaultDirectories.find(path => existsSync(path));
 	if (!directory) io.exit(`Could not find ${game.name} saves, use --directory to specify where they are`);
+	return { game, directory };
+}
 
+function loadTimelines(options: ScanOptions): Timeline[] {
+	const { game, directory } = resolve(options);
 	const saves = io.track(`Scanning ${directory}`, () => game.scan(directory));
 	return Timeline.fromSaves(saves);
 }
@@ -56,10 +61,40 @@ cli.command('gui', { isDefault: true })
 	.addOption(gameOption)
 	.addOption(directoryOption)
 	.action(async options => {
-		const timelines = loadTimelines(options);
+		const { game, directory } = resolve(options);
 		const entry = './gui/main.js';
-		const gui = (await import(entry)) as { run(timelines: Timeline[]): Promise<void> };
-		await gui.run(timelines);
+		const gui = (await import(entry)) as { run(game: Game, directory: string): void };
+		gui.run(game, directory);
+	});
+
+const dataDirectoryOption = new Option('--data-directory <path>', 'Where to link them').default(
+	defaultDataDirectory(),
+	'system-wide as root, otherwise your user'
+);
+
+cli.command('install')
+	.description('Add the desktop entry and icon, so the app shows up in launchers')
+	.addOption(dataDirectoryOption)
+	.option('--global-only', 'Only install during a global npm install, and warn instead of failing')
+	.action(options => {
+		if (!options.globalOnly) {
+			for (const path of installEntry(options.dataDirectory)) io.log('Linked', path);
+			return;
+		}
+
+		if (process.env.npm_config_global !== 'true' || process.platform != 'linux') return;
+		try {
+			installEntry(options.dataDirectory);
+		} catch (error) {
+			io.warn('Could not install the desktop entry:', io.errorText(error));
+		}
+	});
+
+cli.command('uninstall')
+	.description('Remove the desktop entry and icon')
+	.addOption(dataDirectoryOption)
+	.action(options => {
+		for (const path of uninstallEntry(options.dataDirectory)) io.log('Removed', path);
 	});
 
 export default cli;

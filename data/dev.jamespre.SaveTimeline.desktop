@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Save Timeline
+Comment=View game saves as branching timelines
+Exec=save-timeline
+TryExec=save-timeline
+Icon=dev.jamespre.SaveTimeline
+Terminal=false
+Categories=Game;Utility;
+Keywords=save;savegame;cyberpunk;

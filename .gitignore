@@ -9,4 +9,5 @@ girbind
 *.tsbuildinfo
 .*
 !.gitignore
+!.github
 !.vscode

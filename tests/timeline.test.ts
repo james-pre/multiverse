@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
-import { parseTimestamp } from '../src/games/cyberpunk.js';
 import { layoutTimeline } from '../src/layout.js';
 import type { Save } from '../src/save.js';
 import { Timeline } from '../src/timeline.js';
@@ -21,6 +20,7 @@ function save(name: string, playTime: number, day: number, progress: string[] = 
 		time,
 		kind: 'manual',
 		label: '',
+		highlights: [],
 		progress: new Set(progress),
 		details: {},
 	};
@@ -109,30 +109,62 @@ suite('layoutTimeline', () => {
 suite('Viewport', () => {
 	const timeline = new Timeline([save('one', 0, 0), save('two', 1000, 0)]);
 
-	test('fit spans the whole timeline', () => {
+	test('starts out fitting the whole timeline', () => {
 		const viewport = new Viewport(layoutTimeline(timeline));
-		viewport.fit(1064, 400);
-		assert.equal(viewport.x(0), viewport.margin);
-		assert.equal(viewport.x(1000), 1064 - viewport.margin);
+		viewport.resize(1064, 400);
+		assert.equal(viewport.x(0), viewport.padding);
+		assert.equal(viewport.x(1000), 1064 - viewport.padding);
 	});
 
 	test('zoom keeps the anchor in place', () => {
 		const viewport = new Viewport(layoutTimeline(timeline));
-		viewport.fit(1064, 400);
-		const before = viewport.playTimeAt(300);
-		viewport.zoom(2, 300);
-		assert.ok(Math.abs(viewport.playTimeAt(300) - before) < 1e-9);
+		viewport.resize(1064, 400);
+		const before = viewport.playTimeAt(500);
+		viewport.zoom(2, 500);
+		assert.ok(Math.abs(viewport.playTimeAt(500) - before) < 1e-9);
+	});
+
+	test('can not zoom out past fitting the whole timeline', () => {
+		const viewport = new Viewport(layoutTimeline(timeline));
+		viewport.resize(1064, 400);
+		viewport.zoom(0.5, 500);
+		assert.equal(viewport.scale, viewport.fitScale);
+		assert.equal(viewport.x(0), viewport.padding);
+	});
+
+	test('panning stops at the ends of the timeline', () => {
+		const viewport = new Viewport(layoutTimeline(timeline));
+		viewport.resize(1064, 400);
+		viewport.zoom(4, 500);
+		viewport.pan(10_000);
+		assert.equal(viewport.left, 0);
+		viewport.pan(-10_000);
+		assert.ok(Math.abs(viewport.x(1000) - (1064 - viewport.padding)) < 1e-9);
+	});
+
+	test('a resize keeps the timeline fitted while zoomed out', () => {
+		const viewport = new Viewport(layoutTimeline(timeline));
+		viewport.resize(1064, 400);
+		viewport.resize(2064, 400);
+		assert.equal(viewport.x(1000), 2064 - viewport.padding);
+	});
+
+	test('match keeps the zoom of an earlier viewport', () => {
+		const before = new Viewport(layoutTimeline(timeline));
+		before.resize(1064, 400);
+		before.zoom(4, 500);
+		const after = new Viewport(layoutTimeline(new Timeline([save('one', 0, 0), save('two', 1000, 0)])));
+		after.resize(1064, 400);
+		after.match(before);
+		assert.equal(after.scale, before.scale);
+		assert.equal(after.left, before.left);
 	});
 
 	test('hitTest finds the node under the pointer', () => {
 		const viewport = new Viewport(layoutTimeline(timeline));
-		viewport.fit(1064, 400);
+		viewport.resize(1064, 400);
 		const { x, y } = viewport.position(timeline.find('two')!);
 		assert.equal(viewport.hitTest(x + 3, y + 3)?.save.name, 'two');
 		assert.equal(viewport.hitTest(x, y + viewport.laneHeight), undefined);
 	});
-});
-
-test('parseTimestamp reads Cyberpunk timestamps', () => {
-	assert.equal(parseTimestamp('23:19:28, 5.09.2026').toPlainDateTime().toString(), '2026-09-05T23:19:28');
 });

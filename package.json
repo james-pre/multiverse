@@ -3,15 +3,30 @@
 	"version": "0.0.0",
 	"description": "View game saves as branching timelines",
 	"type": "module",
-	"private": true,
 	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
 	"license": "LGPL-3.0-or-later",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/james-pre/save-timeline.git"
+	},
+	"homepage": "https://github.com/james-pre/save-timeline",
+	"bugs": {
+		"url": "https://github.com/james-pre/save-timeline/issues"
+	},
 	"engines": {
 		"node": ">= 22"
 	},
 	"bin": {
 		"save-timeline": "dist/main.js"
 	},
+	"files": [
+		"dist",
+		"native/*.js",
+		"native/*.node",
+		"data",
+		"locales",
+		"LICENSE.md"
+	],
 	"exports": {
 		".": "./dist/index.js",
 		"./*": "./dist/*.js"
@@ -19,11 +34,12 @@
 	"scripts": {
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"lint": "tsc -p tsconfig.json --noEmit && tsc -p src/gui/tsconfig.json --noEmit && eslint src",
-		"build": "tsc -p tsconfig.json && tsc -p src/gui/tsconfig.json",
-		"build:native": "girbind build",
+		"lint": "locales-typegen && tsc -p tsconfig.json --noEmit && tsc -p src/gui/tsconfig.json --noEmit && eslint src",
+		"build": "locales-typegen && tsc -p tsconfig.json && tsc -p src/gui/tsconfig.json",
 		"test": "tsx --test tests/*.test.ts",
-		"start": "node dist/main.js"
+		"build:native": "girbind build",
+		"postinstall": "[ ! -e dist/main.js ] || node dist/main.js install --global-only",
+		"prepublishOnly": "npm run build"
 	},
 	"prettier": {
 		"singleQuote": true,
@@ -44,8 +60,9 @@
 		"adw"
 	],
 	"dependencies": {
+		"@james-pre/locales": "^1.0.0",
 		"commander": "^15.0.0",
-		"girbind": "^0.3.1",
+		"girbind": "^0.4.0",
 		"ioium": "^1.11.1",
 		"utilium": "^3.10.0",
 		"zod": "^4.6.7"
@@ -55,7 +72,7 @@
 		"@eslint/js": "^10.0.1",
 		"@types/node": "^26.6.5",
 		"eslint": "^10.13.0",
-		"girbind-devel": "^0.3.1",
+		"girbind-devel": "^0.4.0",
 		"globals": "^17.13.0",
 		"prettier": "^3.9.10",
 		"tsx": "^4.23.15",
