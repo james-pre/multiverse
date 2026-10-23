@@ -1,0 +1,116 @@
+{
+	"name": "save-timeline",
+	"version": "0.0.0",
+	"description": "View game saves as branching timelines",
+	"type": "module",
+	"private": true,
+	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
+	"license": "LGPL-3.0-or-later",
+	"engines": {
+		"node": ">= 22"
+	},
+	"bin": {
+		"save-timeline": "dist/main.js"
+	},
+	"exports": {
+		".": "./dist/index.js",
+		"./*": "./dist/*.js"
+	},
+	"scripts": {
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"lint": "tsc -p tsconfig.json --noEmit && eslint src",
+		"build": "tsc -p tsconfig.json",
+		"build:native": "girbind build",
+		"test": "tsx --test tests/*.test.ts",
+		"start": "node dist/main.js"
+	},
+	"prettier": {
+		"singleQuote": true,
+		"useTabs": true,
+		"trailingComma": "es5",
+		"tabWidth": 4,
+		"printWidth": 120,
+		"arrowParens": "avoid",
+		"experimentalOperatorPosition": "start"
+	},
+	"girbindDependencies": [
+		{
+			"name": "gtk",
+			"gir": "/usr/share/gir-1.0/Gtk-4.0.gir",
+			"include": [
+				"gtk/gtk.h"
+			],
+			"pkgConfig": [
+				"gtk4"
+			]
+		},
+		{
+			"name": "adw",
+			"gir": "/usr/share/gir-1.0/Adw-1.gir",
+			"include": [
+				"adwaita.h"
+			],
+			"pkgConfig": [
+				"libadwaita-1"
+			]
+		},
+		{
+			"name": "gsk",
+			"gir": "/usr/share/gir-1.0/Gsk-4.0.gir",
+			"include": [
+				"gtk/gtk.h"
+			],
+			"pkgConfig": [
+				"gtk4"
+			]
+		},
+		{
+			"name": "gdk",
+			"gir": "/usr/share/gir-1.0/Gdk-4.0.gir",
+			"include": [
+				"gtk/gtk.h"
+			],
+			"pkgConfig": [
+				"gtk4"
+			]
+		},
+		{
+			"name": "graphene",
+			"gir": "/usr/share/gir-1.0/Graphene-1.0.gir",
+			"include": [
+				"graphene.h"
+			],
+			"pkgConfig": [
+				"graphene-1.0"
+			]
+		},
+		{
+			"name": "pango",
+			"gir": "/usr/share/gir-1.0/Pango-1.0.gir",
+			"include": [
+				"pango/pango.h"
+			],
+			"pkgConfig": [
+				"pango"
+			]
+		}
+	],
+	"dependencies": {
+		"commander": "^15.0.0",
+		"ioium": "^1.11.1",
+		"zod": "^4.6.7"
+	},
+	"devDependencies": {
+		"@commander-js/extra-typings": "^15.0.0",
+		"@eslint/js": "^10.0.1",
+		"@types/node": "^26.6.5",
+		"eslint": "^10.13.0",
+		"girbind": "^0.1.3",
+		"globals": "^17.13.0",
+		"prettier": "^3.9.10",
+		"tsx": "^4.23.15",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.72.0"
+	}
+}

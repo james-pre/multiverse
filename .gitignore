@@ -1,0 +1,12 @@
+node_modules
+dist
+docs
+tmp
+build
+native
+girbind
+*.log
+*.tsbuildinfo
+.*
+!.gitignore
+!.vscode
