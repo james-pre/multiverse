@@ -11,3 +11,4 @@ girbind
 !.gitignore
 !.github
 !.vscode
+!.prettierignore
