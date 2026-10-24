@@ -64,7 +64,7 @@
 	"dependencies": {
 		"@james-pre/locales": "^1.0.1",
 		"commander": "^15.0.0",
-		"girbind": "^0.5.1",
+		"girbind": "^0.6.0",
 		"ioium": "^1.11.1",
 		"memium": "^1.1.1",
 		"utilium": "^3.10.0",
@@ -75,7 +75,7 @@
 		"@eslint/js": "^10.0.1",
 		"@types/node": "^26.6.5",
 		"eslint": "^10.13.0",
-		"girbind-devel": "^0.5.1",
+		"girbind-devel": "^0.6.0",
 		"globals": "^17.13.0",
 		"prettier": "^3.9.10",
 		"tsx": "^4.23.15",
