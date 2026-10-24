@@ -28,6 +28,11 @@ export interface Inspector {
 	open(path: string): Inspection;
 	/** The save's data without compression, for other tools */
 	decompress?(path: string): Uint8Array;
+	/**
+	 * Copies a save so the game lists the copy as another save, returning the copy's path.
+	 * Inspectors whose inspections can write saves have this.
+	 */
+	copy?(path: string): string;
 }
 
 /**
