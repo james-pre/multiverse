@@ -79,7 +79,12 @@ export function valueEntry(name: string, value: unknown, options: ValueOptions =
 	if (typeof value != 'object') return { name, summary: typeof value };
 
 	if (isArrayLike(value)) {
-		const elementType = ArrayBuffer.isView(value) ? value.constructor.name.replace(/Array$/, '') : '';
+		const first = value[0];
+		const elementType = ArrayBuffer.isView(value)
+			? value.constructor.name.replace(/Array$/, '')
+			: typeof first == 'object' && first !== null
+				? (options.typeOf?.(first) ?? '')
+				: '';
 		const summary = type ? `${type}(${value.length})` : `${elementType}[${value.length}]`;
 		if (!value.length) return { name, summary };
 		return {

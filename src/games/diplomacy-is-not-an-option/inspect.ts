@@ -73,7 +73,7 @@ class DinoInspection implements Inspection {
 	protected research(): Row[] {
 		const { research } = this.container;
 		const rows: Row[] = [];
-		if (research.currentResearchId != -1) {
+		if ((research.currentResearchId ?? -1) != -1) {
 			rows.push({
 				label: text('dinao.row.current_research'),
 				value: String(research.currentResearchId),

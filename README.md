@@ -17,9 +17,9 @@ Multiverse needs GTK 4 and libadwaita. Either download `multiverse-linux-x64` fr
 sudo npm i -g @james-pre/multiverse --allow-scripts=@james-pre/multiverse
 ```
 
-npm only runs the install script, which adds a desktop entry and icon so Multiverse shows up in your launcher, if `--allow-scripts` covers the package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
+npm only runs the install script, which adds Multiverse to your launcher, if `--allow-scripts` covers the package. On Linux it adds a desktop entry and icon. On Windows, where npm installs for the current user without `sudo`, it adds a Start Menu shortcut and lists Multiverse in Settings' installed apps, where uninstalling it also uninstalls the npm package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
 
-`multiverse install` and `multiverse uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
+`multiverse install` and `multiverse uninstall` manage the launcher entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
 
 ## Usage
 

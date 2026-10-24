@@ -10,7 +10,7 @@ export interface SessionTime extends nrbf.Instance {
 }
 
 export interface Research extends nrbf.Instance {
-	currentResearchId: number;
+	currentResearchId?: number;
 	progress: number;
 	completeBuildings: Int32Array;
 	completeResearches: Int32Array;
