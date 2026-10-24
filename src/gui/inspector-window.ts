@@ -30,8 +30,13 @@ function valueLabel(value: string): Gtk.Label {
 	return widget;
 }
 
+/** Runs `populate` the first time a widget is expanded, unless `signal` aborts first */
+function whenExpanded(widget: Adw.ExpanderRow | Gtk.Expander, signal: AbortSignal, populate: () => void): void {
+	void once(widget, 'notify::expanded', { signal }).then(populate, () => undefined);
+}
+
 /** A row in the overview, whose child rows are only created once it is expanded */
-function rowWidget(row: Row): Gtk.Widget {
+function rowWidget(row: Row, signal: AbortSignal): Gtk.Widget {
 	if (!row.rows?.length) {
 		const widget = new Adw.ActionRow();
 		widget.setUseMarkup(false);
@@ -46,14 +51,14 @@ function rowWidget(row: Row): Gtk.Widget {
 	widget.setTitle(row.label);
 	if (row.detail) widget.setSubtitle(row.detail);
 	if (row.value !== undefined) widget.addSuffix(valueLabel(row.value));
-	void once(widget, 'notify::expanded').then(() => {
-		for (const child of row.rows!) widget.addRow(rowWidget(child));
+	whenExpanded(widget, signal, () => {
+		for (const child of row.rows!) widget.addRow(rowWidget(child, signal));
 	});
 	return widget;
 }
 
 /** An entry in the contents, like HTML's `<details>`, whose children are only read once it is expanded */
-function entryWidget(entry: Entry): Gtk.Widget {
+function entryWidget(entry: Entry, signal: AbortSignal): Gtk.Widget {
 	const heading = new Gtk.Box(Gtk.Orientation.horizontal, 12);
 	heading.append(label(entry.name));
 	const summary = label(entry.summary, 'dim-label');
@@ -68,16 +73,16 @@ function entryWidget(entry: Entry): Gtk.Widget {
 
 	const expander = new Gtk.Expander(null);
 	expander.setLabelWidget(heading);
-	void once(expander, 'notify::expanded').then(() => expander.setChild(entryList(entry)));
+	whenExpanded(expander, signal, () => expander.setChild(entryList(entry, signal)));
 	return expander;
 }
 
-function entryList(entry: Entry): Gtk.Widget {
+function entryList(entry: Entry, signal: AbortSignal): Gtk.Widget {
 	const list = new Gtk.Box(Gtk.Orientation.vertical, 4);
 	list.setMarginStart(18);
 	list.setMarginTop(4);
 	try {
-		for (const child of entry.children?.() ?? []) list.append(entryWidget(child));
+		for (const child of entry.children?.() ?? []) list.append(entryWidget(child, signal));
 	} catch (error) {
 		list.append(label(io.errorText(error), 'error'));
 	}
@@ -89,6 +94,8 @@ export class InspectorWindow {
 	public readonly window: Adw.ApplicationWindow;
 	protected readonly stack = new Adw.ViewStack();
 	protected readonly toolbar = new Adw.ToolbarView();
+	/** Aborts when the window closes, disconnecting its signal handlers so the save's data can be freed */
+	protected readonly closing = new AbortController();
 
 	public constructor(
 		application: Adw.Application,
@@ -115,8 +122,11 @@ export class InspectorWindow {
 		this.window.setContent(this.toolbar);
 
 		const hold = keepAlive();
-		connect(this.window, 'close-request', () => hold.release());
-		setTimeout(() => this.load(), loadDelay);
+		const { signal } = this.closing;
+		connect(this.window, 'close-request', () => this.closing.abort(), { signal });
+		signal.addEventListener('abort', () => hold.release());
+		const timer = setTimeout(() => this.load(), loadDelay);
+		signal.addEventListener('abort', () => clearTimeout(timer));
 	}
 
 	protected load(): void {
@@ -184,9 +194,11 @@ export class InspectorWindow {
 			try {
 				const rows = inspection.section(name);
 				if (!rows.length) continue;
-				for (const row of rows) group.add(rowWidget(row));
+				for (const row of rows) group.add(rowWidget(row, this.closing.signal));
 			} catch (error) {
-				group.add(rowWidget({ label: text('inspector.error'), detail: io.errorText(error) }));
+				group.add(
+					rowWidget({ label: text('inspector.error'), detail: io.errorText(error) }, this.closing.signal)
+				);
 			}
 			page.add(group);
 		}
@@ -196,7 +208,7 @@ export class InspectorWindow {
 	protected contents(inspection: Inspection): Gtk.Widget {
 		const scroll = new Gtk.ScrolledWindow();
 		scroll.setPolicy(Gtk.PolicyType.automatic, Gtk.PolicyType.automatic);
-		const list = entryList(inspection.contents());
+		const list = entryList(inspection.contents(), this.closing.signal);
 		list.setMarginTop(12);
 		list.setMarginBottom(12);
 		list.setMarginEnd(12);
