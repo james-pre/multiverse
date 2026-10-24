@@ -124,11 +124,20 @@ export class TimelinePage {
 		this.watch();
 	}
 
-	/** Stop watching for changes, once the page is closed. */
+	/** Stop watching for changes and free the timelines, once the page is closed. */
 	public dispose(): void {
 		this.watcher?.close();
 		clearTimeout(this.reloadTimer);
 		disconnect(Adw.StyleManager.getDefault(), this.styleHandler);
+		for (const view of this.views) this.disposeView(view);
+	}
+
+	/** Remove and free a view, since its event handlers would otherwise keep it alive. */
+	protected disposeView(view: TimelineView): void {
+		this.stack.remove(view);
+		this.popovers.get(view)?.unparent();
+		this.popovers.delete(view);
+		view.dispose();
 	}
 
 	protected watch(): void {
@@ -158,11 +167,7 @@ export class TimelinePage {
 			return view;
 		});
 
-		for (const view of previous.values()) {
-			this.stack.remove(view);
-			this.popovers.get(view)?.unparent();
-			this.popovers.delete(view);
-		}
+		for (const view of previous.values()) this.disposeView(view);
 
 		this.hovered = undefined;
 		this.selected =

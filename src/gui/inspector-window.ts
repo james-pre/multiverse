@@ -1,4 +1,4 @@
-import { connect, keepAlive, once } from 'girbind';
+import { keepAlive, once } from 'girbind';
 import * as io from 'ioium';
 import * as Adw from '../../native/adw.js';
 import * as Gtk from '../../native/gtk.js';
@@ -30,13 +30,13 @@ function valueLabel(value: string): Gtk.Label {
 	return widget;
 }
 
-/** Runs `populate` the first time a widget is expanded, unless `signal` aborts first */
-function whenExpanded(widget: Adw.ExpanderRow | Gtk.Expander, signal: AbortSignal, populate: () => void): void {
-	void once(widget, 'notify::expanded', { signal }).then(populate, () => undefined);
+/** Runs `populate` the first time a widget is expanded */
+function whenExpanded(widget: Adw.ExpanderRow | Gtk.Expander, populate: () => void): void {
+	void once(widget, 'notify::expanded').then(populate);
 }
 
 /** A row in the overview, whose child rows are only created once it is expanded */
-function rowWidget(row: Row, signal: AbortSignal): Gtk.Widget {
+function rowWidget(row: Row): Gtk.Widget {
 	if (!row.rows?.length) {
 		const widget = new Adw.ActionRow();
 		widget.setUseMarkup(false);
@@ -51,14 +51,14 @@ function rowWidget(row: Row, signal: AbortSignal): Gtk.Widget {
 	widget.setTitle(row.label);
 	if (row.detail) widget.setSubtitle(row.detail);
 	if (row.value !== undefined) widget.addSuffix(valueLabel(row.value));
-	whenExpanded(widget, signal, () => {
-		for (const child of row.rows!) widget.addRow(rowWidget(child, signal));
+	whenExpanded(widget, () => {
+		for (const child of row.rows!) widget.addRow(rowWidget(child));
 	});
 	return widget;
 }
 
 /** An entry in the contents, like HTML's `<details>`, whose children are only read once it is expanded */
-function entryWidget(entry: Entry, signal: AbortSignal): Gtk.Widget {
+function entryWidget(entry: Entry): Gtk.Widget {
 	const heading = new Gtk.Box(Gtk.Orientation.horizontal, 12);
 	heading.append(label(entry.name));
 	const summary = label(entry.summary, 'dim-label');
@@ -73,16 +73,16 @@ function entryWidget(entry: Entry, signal: AbortSignal): Gtk.Widget {
 
 	const expander = new Gtk.Expander(null);
 	expander.setLabelWidget(heading);
-	whenExpanded(expander, signal, () => expander.setChild(entryList(entry, signal)));
+	whenExpanded(expander, () => expander.setChild(entryList(entry)));
 	return expander;
 }
 
-function entryList(entry: Entry, signal: AbortSignal): Gtk.Widget {
+function entryList(entry: Entry): Gtk.Widget {
 	const list = new Gtk.Box(Gtk.Orientation.vertical, 4);
 	list.setMarginStart(18);
 	list.setMarginTop(4);
 	try {
-		for (const child of entry.children?.() ?? []) list.append(entryWidget(child, signal));
+		for (const child of entry.children?.() ?? []) list.append(entryWidget(child));
 	} catch (error) {
 		list.append(label(io.errorText(error), 'error'));
 	}
@@ -94,8 +94,6 @@ export class InspectorWindow {
 	public readonly window: Adw.ApplicationWindow;
 	protected readonly stack = new Adw.ViewStack();
 	protected readonly toolbar = new Adw.ToolbarView();
-	/** Aborts when the window closes, disconnecting its signal handlers so the save's data can be freed */
-	protected readonly closing = new AbortController();
 
 	public constructor(
 		application: Adw.Application,
@@ -122,11 +120,11 @@ export class InspectorWindow {
 		this.window.setContent(this.toolbar);
 
 		const hold = keepAlive();
-		const { signal } = this.closing;
-		connect(this.window, 'close-request', () => this.closing.abort(), { signal });
-		signal.addEventListener('abort', () => hold.release());
 		const timer = setTimeout(() => this.load(), loadDelay);
-		signal.addEventListener('abort', () => clearTimeout(timer));
+		void once(this.window, 'close-request').then(() => {
+			hold.release();
+			clearTimeout(timer);
+		});
 	}
 
 	protected load(): void {
@@ -194,11 +192,9 @@ export class InspectorWindow {
 			try {
 				const rows = inspection.section(name);
 				if (!rows.length) continue;
-				for (const row of rows) group.add(rowWidget(row, this.closing.signal));
+				for (const row of rows) group.add(rowWidget(row));
 			} catch (error) {
-				group.add(
-					rowWidget({ label: text('inspector.error'), detail: io.errorText(error) }, this.closing.signal)
-				);
+				group.add(rowWidget({ label: text('inspector.error'), detail: io.errorText(error) }));
 			}
 			page.add(group);
 		}
@@ -208,7 +204,7 @@ export class InspectorWindow {
 	protected contents(inspection: Inspection): Gtk.Widget {
 		const scroll = new Gtk.ScrolledWindow();
 		scroll.setPolicy(Gtk.PolicyType.automatic, Gtk.PolicyType.automatic);
-		const list = entryList(inspection.contents(), this.closing.signal);
+		const list = entryList(inspection.contents());
 		list.setMarginTop(12);
 		list.setMarginBottom(12);
 		list.setMarginEnd(12);
