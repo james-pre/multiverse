@@ -169,6 +169,12 @@ suite('Viewport', () => {
 		assert.equal(after.left, before.left);
 	});
 
+	test('a single save is centered', () => {
+		const viewport = new Viewport(layoutTimeline(new Timeline([save('one', 500, 0)])));
+		viewport.resize(1064, 400);
+		assert.equal(viewport.x(500), 1064 / 2);
+	});
+
 	test('hitTest finds the node under the pointer', () => {
 		const viewport = new Viewport(layoutTimeline(timeline));
 		viewport.resize(1064, 400);

@@ -6,6 +6,8 @@ Supported games:
 
 - Cyberpunk 2077 (Steam).
 - The Elder Scrolls V: Skyrim Special Edition (Steam), including co-saves from the Skyrim Script Extender.
+- Diplomacy is Not an Option (Steam).
+- InfraSpace (Steam).
 
 ## Installation
 

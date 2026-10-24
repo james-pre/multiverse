@@ -12,6 +12,9 @@
 		"description": "Choose a game to see its saves as timelines",
 		"no_saves": "No saves found"
 	},
+	"sidebar": {
+		"subtitle": "{count} saves · {time}"
+	},
 	"card": {
 		"empty": "Hover over a save to see its details",
 		"separator": "  ·  "
@@ -52,6 +55,26 @@
 			"quests_completed": "Quests completed",
 			"locations_discovered": "Locations discovered",
 			"dragon_souls": "Dragon souls"
+		}
+	},
+	"dinao": {
+		"playthrough": "{name} · {citizens} citizens",
+		"citizens": "{count} citizens",
+		"kills": "{count} kills",
+		"detail": {
+			"buildings": "Buildings",
+			"difficulty": "Difficulty",
+			"save_version": "Save version"
+		}
+	},
+	"infraspace": {
+		"playthrough": "{name} · City level {level}",
+		"city_level": "City level {level}",
+		"research": "{count} researched",
+		"detail": {
+			"version": "Game version",
+			"map": "Map",
+			"research": "Research completed"
 		}
 	}
 }

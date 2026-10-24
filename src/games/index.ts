@@ -3,6 +3,8 @@ import type { Save } from '../save.js';
 import * as steam from '../steam.js';
 import type { Timeline } from '../timeline.js';
 import { cyberpunk } from './cyberpunk.js';
+import { diplomacyIsNotAnOption } from './diplomacy-is-not-an-option.js';
+import { infraspace } from './infraspace.js';
 import { skyrim } from './skyrim/index.js';
 
 /** Something a game lets you do with a save, beyond deleting it. */
@@ -37,7 +39,9 @@ export interface Game {
 	inspector?: Inspector;
 }
 
-export const games = new Map<string, Game>([cyberpunk, skyrim].map(game => [game.id, game]));
+export const games = new Map<string, Game>(
+	[cyberpunk, skyrim, diplomacyIsNotAnOption, infraspace].map(game => [game.id, game])
+);
 
 export function getGame(id: string): Game {
 	const game = games.get(id);
