@@ -2,9 +2,9 @@ import * as io from 'ioium';
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import * as z from 'zod';
-import { text } from '../i18n.js';
-import type { Save } from '../save.js';
-import type { Game } from './index.js';
+import { text } from '../../i18n.js';
+import type { Save } from '../../save.js';
+import type { Game } from '../index.js';
 
 const Metadata = z.object({
 	Data: z.object({
