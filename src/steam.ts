@@ -1,12 +1,17 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
 export interface Game {
 	/** The app ID, e.g. `1091500` */
 	id: number;
-	/** The save folder relative to the user's profile, e.g. `Saved Games/CD Projekt Red/Cyberpunk 2077` */
+	/**
+	 * The save folder relative to the user's profile, e.g. `Saved Games/CD Projekt Red/Cyberpunk 2077`,
+	 * or relative to the game's Steam Cloud folder when `cloud` is set
+	 */
 	saves: string;
+	/** Whether the game keeps its saves in its Steam Cloud folder, `userdata/<account>/<id>/remote` */
+	cloud?: boolean;
 }
 
 /** Data in Valve's KeyValues text format */
@@ -95,11 +100,22 @@ export function libraries(): Library[] {
 	return [...found.values()];
 }
 
+/** The game's Steam Cloud folders, one for each account on this machine */
+export function cloudDirectories({ id, saves }: Game, installations: string[] = roots()): string[] {
+	return installations.flatMap(root => {
+		const userdata = join(root, 'userdata');
+		if (!existsSync(userdata)) return [];
+		return readdirSync(userdata).map(account => join(userdata, account, String(id), 'remote', saves));
+	});
+}
+
 /**
  * Where a Steam game could keep its saves on this machine, with libraries that have the game installed first.
- * On Linux this is inside the game's Proton prefix.
+ * On Linux this is inside the game's Proton prefix, unless the game keeps its saves in Steam Cloud's folder.
  */
-export function saveDirectories({ id, saves }: Game, available: Library[] = libraries()): string[] {
+export function saveDirectories(game: Game, available: Library[] = libraries()): string[] {
+	const { id, saves } = game;
+	if (game.cloud) return cloudDirectories(game);
 	if (process.platform == 'win32') return [join(homedir(), saves)];
 
 	return available
@@ -110,7 +126,10 @@ export function saveDirectories({ id, saves }: Game, available: Library[] = libr
 /** Proton prefixes' user profile directories */
 const prefixProfile = /^.*\/steamapps\/compatdata\/\d+\/pfx\/drive_c\/users\/steamuser(?=\/|$)/;
 
-/** Shortens a path in a Proton prefix's user profile to start with `S:`, or returns it unchanged. */
+/** Steam Cloud folders for a game */
+const cloudFolder = /^.*[/\\]userdata[/\\]\d+[/\\]\d+[/\\]remote(?=[/\\]|$)/;
+
+/** Shortens a path in a Proton prefix's user profile to start with `S:`, and one in a Steam Cloud folder to start with `Steam Cloud:`. */
 export function shortPath(path: string): string {
-	return path.replace(prefixProfile, 'S:');
+	return path.replace(prefixProfile, 'S:').replace(cloudFolder, 'Steam Cloud:');
 }
