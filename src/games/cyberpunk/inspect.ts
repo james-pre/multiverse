@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { bytes } from 'utilium/format';
-import { binaryEdit, copySave, linkedEdit, type Edit } from '../../editing.js';
+import { binaryEdit, copySave, linkedEdit, namedChoices, type Edit } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
@@ -55,7 +55,9 @@ interface Development extends Instance {
 	attributesData?: AttributeData[];
 }
 
-const skills = ['StrengthSkill', 'ReflexesSkill', 'TechnicalAbilitySkill', 'IntelligenceSkill', 'CoolSkill'];
+const difficulties = ['Story', 'Easy', 'Hard', 'VeryHard'];
+
+const skills = ['StrengthSkill','ReflexesSkill', 'TechnicalAbilitySkill', 'IntelligenceSkill', 'CoolSkill'];
 
 /** A name from the game's data, localized when there is a translation */
 function gameName(group: string, name: string): string {
@@ -172,7 +174,7 @@ class CyberpunkInspection implements Inspection {
 			return {
 				label,
 				value: formatValue(found?.unspent ?? 0),
-				edit: found && container.locations.edit(found, 'unspent', { safe: true, minimum: 0, maximum: 999 }),
+				edit: found && container.fieldEdit(found, 'unspent', 'Int32', { safe: true, minimum: 0, maximum: 999 }),
 			};
 		};
 		rows.push({
@@ -250,7 +252,14 @@ class CyberpunkInspection implements Inspection {
 				{ label: text('cyberpunk.row.slot'), value: metadata.name },
 				{ label: text('cyberpunk.row.play_time'), value: hoursAndMinutes(metadata.playthroughTime) },
 				{ label: text('cyberpunk.row.save_date'), value: shortDate(parseTimestamp(metadata.timestampString)) },
-				{ label: text('cyberpunk.row.difficulty'), value: metadata.difficulty },
+				{
+					label: text('cyberpunk.row.difficulty'),
+					value: gameName('difficulty', metadata.difficulty),
+					edit: this.document?.edit(this.raw, 'difficulty', {
+						safe: true,
+						choices: namedChoices(difficulties, difficulty => gameName('difficulty', difficulty)),
+					}),
+				},
 				{ label: text('cyberpunk.row.patch'), value: metadata.buildPatch },
 				{ label: text('cyberpunk.row.modded'), value: formatValue(metadata.isModded) },
 				{

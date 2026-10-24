@@ -126,6 +126,12 @@
 		},
 		"expansion": {
 			"EP1": "Phantom Liberty"
+		},
+		"difficulty": {
+			"Story": "Story",
+			"Easy": "Easy",
+			"Hard": "Hard",
+			"VeryHard": "Very Hard"
 		}
 	},
 	"skyrim": {

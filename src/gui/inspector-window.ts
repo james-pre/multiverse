@@ -6,7 +6,7 @@ import * as Gio from '../../native/gio.js';
 import * as Gtk from '../../native/gtk.js';
 import * as Pango from '../../native/pango.js';
 import type { Archive } from '../archive.js';
-import { parseEditValue, type Edit, type EditValue } from '../editing.js';
+import { choiceLabel, parseEditValue, type Edit, type EditValue } from '../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../format.js';
 import type { Inspector } from '../games/index.js';
 import { text } from '../i18n.js';
@@ -18,6 +18,9 @@ import { screenshotTexture } from './screenshots.js';
 const loadDelay = 50;
 
 type View = 'overview' | 'contents';
+
+/** `GTK_INVALID_LIST_POSITION`, for selecting nothing in a drop-down */
+const noSelection = 0xffffffff;
 
 function label(content: string, cssClass?: string): Gtk.Label {
 	const widget = new Gtk.Label(content);
@@ -45,6 +48,7 @@ function whenExpanded(widget: Adw.ExpanderRow | Gtk.Expander, populate: () => vo
 class ValueEditor extends Gtk.Stack {
 	protected readonly entry?: Gtk.Entry;
 	protected readonly toggle?: Gtk.Switch;
+	protected readonly dropDown?: Gtk.DropDown;
 
 	public constructor(
 		protected readonly edit: Edit,
@@ -58,6 +62,19 @@ class ValueEditor extends Gtk.Stack {
 		this.setHhomogeneous(false);
 		this.setValign(Gtk.Align.center);
 		this.addNamed(display, 'view');
+
+		const { choices } = edit;
+		if (choices) {
+			this.dropDown = Gtk.DropDown.newFromStrings(choices.map(choice => choice.label));
+			this.dropDown.setSelected(this.selected);
+			this.dropDown.setValign(Gtk.Align.center);
+			connect(this.dropDown, 'notify::selected', () => {
+				const choice = choices[this.dropDown!.getSelected()];
+				if (choice && choice.value !== edit.value) this.commit(choice.value);
+			});
+			this.addNamed(this.dropDown, 'edit');
+			return;
+		}
 
 		if (typeof edit.value == 'boolean') {
 			this.toggle = new Gtk.Switch();
@@ -82,6 +99,12 @@ class ValueEditor extends Gtk.Stack {
 		connect(focus, 'leave', () => this.commitText());
 		this.entry.addController(focus);
 		this.addNamed(this.entry, 'edit');
+	}
+
+	/** The position of the current value in the edit's choices */
+	protected get selected(): number {
+		const index = this.edit.choices!.findIndex(choice => choice.value === this.edit.value);
+		return index == -1 ? noSelection : index;
 	}
 
 	/** Show the editor if the value can be changed in the current mode, and the value otherwise */
@@ -110,6 +133,7 @@ class ValueEditor extends Gtk.Stack {
 			this.onError(io.errorText(error));
 			this.entry?.addCssClass('error');
 			this.toggle?.setActive(this.edit.value as boolean);
+			this.dropDown?.setSelected(this.selected);
 		}
 	}
 }
@@ -290,7 +314,8 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 
 	/** A row in the overview, whose child rows are only created once it is expanded */
 	protected rowWidget(row: Row): Gtk.Widget {
-		const format = (value: EditValue) => (typeof value == 'string' ? value : formatValue(value));
+		const format = (value: EditValue) =>
+			(row.edit && choiceLabel(row.edit, value)) ?? (typeof value == 'string' ? value : formatValue(value));
 		const value =
 			row.value === undefined && !row.edit
 				? undefined
@@ -330,7 +355,7 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 			summary.setSelectable(true);
 			heading.append(
 				this.valueWidget(summary, entry.edit, value =>
-					typeof value == 'string' ? JSON.stringify(value) : String(value)
+					typeof value == 'string' ? JSON.stringify(value) : (choiceLabel(entry.edit!, value) ?? String(value))
 				)
 			);
 			return heading;

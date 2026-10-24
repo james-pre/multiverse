@@ -15,12 +15,30 @@ export interface Edit {
 	maximum?: number | bigint;
 	/** Whether changing the value is unlikely to break the save, so it can be changed outside of expert mode */
 	safe?: boolean;
+	/** The only values the edit takes, for values like a difficulty that the game has a list of */
+	choices?: Choice[];
 	/** Change the value in the open save, which is written separately */
 	set(value: EditValue): void;
 }
 
+export interface Choice {
+	value: EditValue;
+	/** What the game calls the value */
+	label: string;
+}
+
 /** Limits and safety that an edit can be given when it is made */
-export type EditOptions = Partial<Pick<Edit, 'integer' | 'minimum' | 'maximum' | 'safe'>>;
+export type EditOptions = Partial<Pick<Edit, 'integer' | 'minimum' | 'maximum' | 'safe' | 'choices'>>;
+
+/** Choices whose values are also their labels */
+export function namedChoices(values: string[], label: (value: string) => string = value => value): Choice[] {
+	return values.map(value => ({ value, label: label(value) }));
+}
+
+/** The label of an edit's current value, if the edit has choices */
+export function choiceLabel(edit: Edit, value: EditValue = edit.value): string | undefined {
+	return edit.choices?.find(choice => choice.value === value)?.label;
+}
 
 const booleans: Record<string, boolean> = { true: true, yes: true, 1: true, false: false, no: false, 0: false };
 
@@ -33,6 +51,13 @@ function checkRange(edit: Edit, value: number | bigint): void {
 /** Parses text as a value for `edit`, throwing if it isn't one the edit takes */
 export function parseEditValue(edit: Edit, input: string): EditValue {
 	const text = input.trim();
+	if (edit.choices) {
+		const choice = edit.choices.find(
+			choice => choice.label.toLowerCase() == text.toLowerCase() || String(choice.value) == text
+		);
+		if (!choice) throw new TypeError(`${input} is not one of ${edit.choices.map(choice => choice.label).join(', ')}`);
+		return choice.value;
+	}
 	switch (typeof edit.value) {
 		case 'string':
 			return input;
@@ -63,6 +88,8 @@ export function checkEditValue(edit: Edit, value: EditValue): EditValue {
 	if (type == 'bigint' && typeof value == 'number' && Number.isInteger(value)) value = BigInt(value);
 	if (type == 'number' && typeof value == 'bigint') value = Number(value);
 	if (typeof value != type) throw new TypeError(`Expected a ${type}, not a ${typeof value}`);
+	if (edit.choices && !edit.choices.some(choice => choice.value === value))
+		throw new RangeError(`${String(value)} is not one of ${edit.choices.map(choice => choice.label).join(', ')}`);
 	if (typeof value == 'number' || typeof value == 'bigint') {
 		if (typeof value == 'number' && !Number.isFinite(value)) throw new TypeError(`${value} is not a number`);
 		if (edit.integer && typeof value == 'number' && !Number.isInteger(value))
@@ -179,6 +206,19 @@ const numberTypes: Record<NumberType, NumberTypeInfo> = {
 /** The size of a type of value, in bytes */
 export function sizeOf(type: NumberType): number {
 	return numberTypes[type].size;
+}
+
+/** A value as it is stored as a type */
+export function encodeNumber(type: NumberType, value: EditValue): Uint8Array {
+	const info = numberTypes[type];
+	const data = new Uint8Array(info.size);
+	info.write(new DataView(data.buffer), 0, value);
+	return data;
+}
+
+/** The value a type has when it is all zeros, which formats that leave out default values mean */
+export function zeroOf(type: NumberType): EditValue {
+	return numberTypes[type].read(new DataView(new ArrayBuffer(8)), 0);
 }
 
 /** A fixed-size value in binary data, which can be changed where it is */
