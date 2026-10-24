@@ -1,4 +1,4 @@
-import { connect, disconnect } from 'girbind';
+import { connect } from 'girbind';
 import * as Adw from '../../native/adw.js';
 import * as Gdk from '../../native/gdk.js';
 import * as Graphene from '../../native/graphene.js';
@@ -74,8 +74,7 @@ export function palette(widget: Gtk.Widget): Palette {
 }
 
 /** Draws one timeline and handles zooming, panning, hovering and selecting saves on it. */
-export class TimelineView {
-	public readonly widget = new Gtk.Picture();
+export class TimelineView extends Gtk.Widget {
 	public viewport: Viewport;
 
 	public hovered?: TimelineNode;
@@ -89,20 +88,10 @@ export class TimelineView {
 	protected dragged = 0;
 
 	public constructor(public timeline: Timeline) {
+		super();
 		this.viewport = new Viewport(layoutTimeline(timeline));
-		this.widget.setHexpand(true);
-		this.widget.setVexpand(true);
-
-		let layoutHandler = 0;
-		connect(this.widget, 'realize', () => {
-			const clock = this.widget.getFrameClock();
-			if (clock) layoutHandler = connect(clock, 'layout', () => this.fitToWidget(), { after: true });
-		});
-		connect(this.widget, 'unrealize', () => {
-			const clock = this.widget.getFrameClock();
-			if (clock && layoutHandler) disconnect(clock, layoutHandler);
-			layoutHandler = 0;
-		});
+		this.setHexpand(true);
+		this.setVexpand(true);
 
 		const motion = new Gtk.EventControllerMotion();
 		connect(motion, 'motion', (_, x, y) => {
@@ -138,7 +127,7 @@ export class TimelineView {
 			if (node) this.select(node);
 		});
 
-		for (const controller of [motion, scroll, drag, click]) this.widget.addController(controller);
+		for (const controller of [motion, scroll, drag, click]) this.addController(controller);
 	}
 
 	public select(node: TimelineNode): void {
@@ -162,13 +151,25 @@ export class TimelineView {
 		this.render();
 	}
 
-	protected fitToWidget(): void {
-		if (!this.widget.getMapped()) return;
-		const width = this.widget.getWidth();
-		const height = this.widget.getHeight();
-		if (width == this.viewport.width && height == this.viewport.height) return;
-		this.viewport.resize(width, height);
-		this.render();
+	public vfunc_measure(): [minimum: number, natural: number, minimumBaseline: number, naturalBaseline: number] {
+		return [0, 0, -1, -1];
+	}
+
+	public vfunc_size_allocate(width: number, height: number): void {
+		if (width != this.viewport.width || height != this.viewport.height) this.viewport.resize(width, height);
+		// Popovers, like the context menu, are positioned by their parent.
+		for (let child = this.getFirstChild(); child; child = child.getNextSibling()) {
+			if (child instanceof Gtk.Popover) child.present();
+		}
+	}
+
+	public vfunc_snapshot(snapshot: Gtk.Snapshot): void {
+		const { width, height } = this.viewport;
+		if (!width || !height) return;
+		const colors = palette(this);
+		this.drawBranches(snapshot, colors);
+		this.drawSaves(snapshot, colors);
+		if (this.hovered) this.drawCard(snapshot, this.hovered, colors);
 	}
 
 	protected hover(node: TimelineNode | undefined): void {
@@ -178,17 +179,9 @@ export class TimelineView {
 		this.render();
 	}
 
+	/** Draw the timeline again, such as after the theme changes */
 	public render(): void {
-		const { width, height } = this.viewport;
-		if (!width || !height) return;
-
-		const colors = palette(this.widget);
-		const snapshot = new Gtk.Snapshot();
-		this.drawBranches(snapshot, colors);
-		this.drawSaves(snapshot, colors);
-		if (this.hovered) this.drawCard(snapshot, this.hovered, colors);
-
-		this.widget.setPaintable(snapshot.toPaintable(new Graphene.Size().init(width, height)));
+		this.queueDraw();
 	}
 
 	protected drawBranches(snapshot: Gtk.Snapshot, colors: Palette): void {
@@ -252,7 +245,7 @@ export class TimelineView {
 			snapshot.pop();
 		}
 
-		const text = this.widget.createPangoLayout(null);
+		const text = this.createPangoLayout(null);
 		text.setMarkup(`<b>${escapeMarkup(save.label || save.name)}</b>\n${hoursAndMinutes(save.playTime)}`, -1);
 		text.setWidth(inner * pangoScale);
 		text.setEllipsize(Pango.EllipsizeMode.end);

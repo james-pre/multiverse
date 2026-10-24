@@ -99,7 +99,7 @@ export class TimelinePage {
 		this.sidebar.addCssClass('navigation-sidebar');
 		connect(this.sidebar, 'row-selected', (_, row) => {
 			const view = row && this.views[row.getIndex()];
-			if (view) this.stack.setVisibleChild(view.widget);
+			if (view) this.stack.setVisibleChild(view);
 		});
 		connect(this.stack, 'notify::visible-child', () => {
 			this.updateTitle();
@@ -154,12 +154,12 @@ export class TimelinePage {
 			if (!view) return this.createView(timeline);
 			previous.delete(timeline.playthrough);
 			view.setTimeline(timeline);
-			this.stack.getPage(view.widget).setTitle(this.game.describe(timeline));
+			this.stack.getPage(view).setTitle(this.game.describe(timeline));
 			return view;
 		});
 
 		for (const view of previous.values()) {
-			this.stack.remove(view.widget);
+			this.stack.remove(view);
 			this.popovers.get(view)?.unparent();
 			this.popovers.delete(view);
 		}
@@ -175,7 +175,7 @@ export class TimelinePage {
 
 	protected get visibleView(): TimelineView | undefined {
 		const visible = this.stack.getVisibleChild();
-		return this.views.find(view => view.widget === visible);
+		return this.views.find(view => view === visible);
 	}
 
 	/** Select the save of a playthrough with only one, since there is nothing else to pick. */
@@ -219,7 +219,7 @@ export class TimelinePage {
 	protected createView(timeline: Timeline): TimelineView {
 		const view = new TimelineView(timeline);
 		this.stack.addTitledWithIcon(
-			view.widget,
+			view,
 			timeline.playthrough,
 			this.game.describe(timeline),
 			'avatar-default-symbolic'
@@ -235,7 +235,7 @@ export class TimelinePage {
 		};
 
 		const popover = Gtk.PopoverMenu.newFromModelFull(this.menu, Gtk.PopoverMenuFlags.nested);
-		popover.setParent(view.widget);
+		popover.setParent(view);
 		popover.setHasArrow(false);
 		this.popovers.set(view, popover);
 		view.onContextMenu = (node, position) => this.showMenu(popover, node, position);
