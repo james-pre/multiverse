@@ -1,11 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
+import { copySave } from '../../editing.js';
 import { formatValue, hoursAndMinutes } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
 import * as nrbf from '../../nrbf.js';
 import type { Inspector } from '../index.js';
-import { isSave, readContainer, savePath, type Resource, type SaveContainer } from './container.js';
+import { isSave, openContainer, savePath, type Resource, type SaveContainer } from './container.js';
 
 const sections = {
 	session: { title: text('dinao.section.session.title'), description: text('dinao.section.session.description') },
@@ -30,10 +31,11 @@ function memberName(name: string): string {
 class DinoInspection implements Inspection {
 	protected readonly path: string;
 	protected readonly container: SaveContainer;
+	protected readonly document: nrbf.Document;
 
 	public constructor(path: string) {
 		this.path = savePath(path);
-		this.container = readContainer(this.path);
+		({ container: this.container, document: this.document } = openContainer(this.path));
 	}
 
 	protected session(): Row[] {
@@ -49,7 +51,11 @@ class DinoInspection implements Inspection {
 		}
 		rows.push(
 			{ label: text('dinao.row.game_time'), value: hoursAndMinutes(sessionTime.elapsedTime) },
-			{ label: text('dinao.row.kills'), value: formatValue(container.deathCounter.value) },
+			{
+				label: text('dinao.row.kills'),
+				value: formatValue(container.deathCounter.value),
+				edit: this.document.locations.edit(container.deathCounter, 'value', { minimum: 0 }),
+			},
 			{ label: text('dinao.row.save_version'), value: String(container.saveVersion) }
 		);
 		return rows;
@@ -65,6 +71,7 @@ class DinoInspection implements Inspection {
 				label: text(`dinao.resource.${resource}`, { $default: resource }),
 				value: formatValue(amount),
 				detail: text('dinao.row.daily', { increase: dailyIncrease, decrease: dailyDecrease }),
+				edit: this.document.locations.edit(value.valueContainer, 'value', { safe: true, minimum: 0 }),
 			});
 		}
 		return rows;
@@ -121,9 +128,13 @@ class DinoInspection implements Inspection {
 			summary: '',
 			children: () => [
 				...(existsSync(headerPath) ? [nrbf.entry('header', nrbf.parse(readFileSync(headerPath)))] : []),
-				nrbf.entry('save', this.container),
+				nrbf.entry('save', this.container, this.document.locations),
 			],
 		};
+	}
+
+	public write(path: string): void {
+		writeFileSync(savePath(path), this.document.data);
 	}
 }
 
@@ -131,4 +142,11 @@ export const inspector: Inspector = {
 	sections,
 	recognizes: isSave,
 	open: path => new DinoInspection(path),
+	copy(path) {
+		const save = savePath(path);
+		let target = `${save} copy`;
+		for (let i = 2; existsSync(target); i++) target = `${save} copy ${i}`;
+		copySave(save, target, [`${save}.dat`]);
+		return target;
+	},
 };

@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { decompressLZ4 } from '../../compression.js';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { compressLZ4, decompressLZ4 } from '../../compression.js';
 import { readFactsTable } from './facts.js';
 import { Package } from './package.js';
 import { Reader } from './reader.js';
@@ -54,6 +54,9 @@ export class SaveFile {
 	public readonly roots: SaveNode[] = [];
 	protected readonly file: Uint8Array;
 	protected decompressed?: Uint8Array;
+	/** Where the chunk table's entries start in the file */
+	protected readonly chunkTableOffset: number;
+	protected readonly packages = new Map<SaveNode, Package>();
 
 	public constructor(path: string) {
 		this.file = readFileSync(path);
@@ -70,6 +73,7 @@ export class SaveFile {
 
 		if (reader.magic() != 'CLZF') throw new Error('The save has no chunk table');
 		const count = reader.u32();
+		this.chunkTableOffset = reader.offset;
 		for (let i = 0; i < count; i++) {
 			this.chunks.push({ offset: reader.u32(), compressedSize: reader.u32(), size: reader.u32() });
 		}
@@ -153,9 +157,48 @@ export class SaveFile {
 		return view.getUint16(8, true) == 4 && [6, 7].includes(view.getUint16(10, true));
 	}
 
-	/** Reads a node whose data is a package, after its index and size. */
+	/** Reads a node whose data is a package, after its index and size, keeping it so changes to it are kept. */
 	public package(node: SaveNode): Package {
-		return new Package(this.nodeData(node).subarray(8));
+		let found = this.packages.get(node);
+		if (!found) this.packages.set(node, (found = new Package(this.nodeData(node).subarray(8))));
+		return found;
+	}
+
+	/** Writes the save with its data as it is now, compressing only the chunks that changed. */
+	public write(path: string): void {
+		const data = this.data();
+		const first = this.chunks[0];
+		if (!first) throw new Error('The save has no data');
+		const chunks: Uint8Array[] = [];
+		const prefix = new Uint8Array(this.file.subarray(0, first.offset));
+		const table = new DataView(prefix.buffer, this.chunkTableOffset);
+		let offset = first.offset;
+		let position = 0;
+
+		for (const [i, chunk] of this.chunks.entries()) {
+			const expected = i ? this.chunks[i - 1].offset + this.chunks[i - 1].compressedSize : first.offset;
+			if (chunk.offset != expected) throw new Error('The save has data between its chunks');
+			const stored = this.file.subarray(chunk.offset, chunk.offset + chunk.compressedSize);
+			const current = data.subarray(position, position + chunk.size);
+			position += chunk.size;
+			const original = decompressLZ4(stored.subarray(8), chunk.size);
+			const isChanged = original.length != current.length || original.some((byte, j) => byte != current[j]);
+			const written = isChanged ? Buffer.concat([stored.subarray(0, 8), compressLZ4(current)]) : stored;
+			table.setUint32(i * 12, offset, true);
+			table.setUint32(i * 12 + 4, written.length, true);
+			chunks.push(written);
+			offset += written.length;
+		}
+
+		const last = this.chunks.at(-1)!;
+		const tableOffset = new DataView(this.file.buffer, this.file.byteOffset + this.file.length - 8).getUint32(
+			0,
+			true
+		);
+		const nodes = this.file.subarray(last.offset + last.compressedSize, -8);
+		const end = new Uint8Array(this.file.subarray(-8));
+		new DataView(end.buffer).setUint32(0, tableOffset + offset - (last.offset + last.compressedSize), true);
+		writeFileSync(path, Buffer.concat([prefix, ...chunks, nodes, end]));
 	}
 
 	/** Every quest fact, mapping the hash of its name to its value */

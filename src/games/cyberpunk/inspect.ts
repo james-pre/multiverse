@@ -1,13 +1,16 @@
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { bytes } from 'utilium/format';
+import { binaryEdit, copySave, linkedEdit, type Edit } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
+import { JsonDocument } from '../../json.js';
 import type { Inspector } from '../index.js';
-import { factHash, readFactsTable } from './facts.js';
-import { describeObjective, lifePathName, parseTimestamp, readMetadata } from './metadata.js';
-import { isInstance, typeName, type Instance } from './package.js';
+import * as slots from './slots.js';
+import { factHash, readFacts } from './facts.js';
+import { describeObjective, findMetadata, lifePathName, Metadata, parseTimestamp } from './metadata.js';
+import { isInstance, typeName, type Instance, type Package } from './package.js';
 import { SaveFile, type SaveNode } from './save-file.js';
 
 const sections = {
@@ -22,6 +25,11 @@ const sections = {
 
 /** The attributes in the metadata, by the names the game shows */
 const attributes = ['strength', 'reflexes', 'technicalAbility', 'intelligence', 'cool'];
+
+interface Attribute extends Instance {
+	attributeName?: string;
+	value?: number;
+}
 
 interface Proficiency extends Instance {
 	type?: string;
@@ -41,6 +49,7 @@ interface AttributeData extends Instance {
 
 /** The parts of `PlayerDevelopmentData` the inspector shows */
 interface Development extends Instance {
+	attributes?: Attribute[];
 	proficiencies?: Proficiency[];
 	devPoints?: DevelopmentPoints[];
 	attributesData?: AttributeData[];
@@ -53,21 +62,40 @@ function gameName(group: string, name: string): string {
 	return text(`cyberpunk.${group}.${name}`, { $default: name.replaceAll('_', ' ') });
 }
 
-function packageEntry(name: string, value: unknown): Entry {
-	return valueEntry(name, value, { typeOf: value => (isInstance(value) ? value[typeName] : undefined) });
+function packageEntry(name: string, value: unknown, container: Package): Entry {
+	return valueEntry(name, value, {
+		typeOf: value => (isInstance(value) ? value[typeName] : undefined),
+		edit: (object, key) => container.locations.edit(object, key),
+	});
 }
+
+/** The development data's names for the attributes in the metadata */
+const attributeNames: Record<string, string> = {
+	strength: 'Strength',
+	reflexes: 'Reflexes',
+	technicalAbility: 'TechnicalAbility',
+	intelligence: 'Intelligence',
+	cool: 'Cool',
+};
 
 class CyberpunkInspection implements Inspection {
 	protected readonly directory: string;
 	protected readonly path: string;
-	protected readonly metadata?: ReturnType<typeof readMetadata>;
+	/** The newest metadata file, which the game shows before loading the save */
+	protected readonly metadataPath?: string;
+	protected readonly document?: JsonDocument;
 	protected file?: SaveFile;
-	protected development?: Development | null;
+	protected development?: { data: Development; package: Package } | null;
 
 	public constructor(path: string) {
 		this.directory = statSync(path).isDirectory() ? path : dirname(path);
 		this.path = join(this.directory, 'sav.dat');
-		this.metadata = readMetadata(this.directory);
+		this.metadataPath = findMetadata(this.directory);
+		if (this.metadataPath) this.document = new JsonDocument(readFileSync(this.metadataPath, 'utf8'));
+	}
+
+	protected get metadata(): { metadata: Metadata } | undefined {
+		return this.document && { metadata: Metadata.parse(this.document.value).Data.metadata };
 	}
 
 	protected get save(): SaveFile {
@@ -76,16 +104,25 @@ class CyberpunkInspection implements Inspection {
 	}
 
 	protected get raw(): Record<string, unknown> {
-		return this.metadata?.raw ?? {};
+		return (this.document?.value as { Data?: { metadata?: Record<string, unknown> } })?.Data?.metadata ?? {};
 	}
 
 	/** The player's level, attributes, skills and perks, from the scriptable systems */
-	protected playerDevelopment(): Development | undefined {
+	protected playerDevelopment(): { data: Development; package: Package } | undefined {
 		if (this.development !== undefined) return this.development ?? undefined;
 		const node = this.save.find('ScriptableSystemsContainer');
-		const objects = node ? this.save.package(node).objects : [];
-		this.development = (objects.find(object => object[typeName] == 'PlayerDevelopmentData') as Development) ?? null;
+		const found = node && this.save.package(node);
+		const data = found?.objects.find(object => object[typeName] == 'PlayerDevelopmentData') as Development;
+		this.development = found && data ? { data, package: found } : null;
 		return this.development ?? undefined;
+	}
+
+	/** An attribute's level, changing it in the save and in the metadata */
+	protected attributeEdit(attribute: string): Edit | undefined {
+		const development = this.playerDevelopment();
+		const data = development?.data.attributes?.find(data => data.attributeName == attributeNames[attribute]);
+		const main = data && development!.package.locations.edit(data, 'value', { minimum: 1, maximum: 20 });
+		return main && linkedEdit(main, [this.document?.edit(this.raw, attribute)]);
 	}
 
 	protected character(): Row[] {
@@ -104,13 +141,15 @@ class CyberpunkInspection implements Inspection {
 					rows: attributes.map(attribute => ({
 						label: gameName('attribute', attribute),
 						value: formatValue(Number(this.raw[attribute] ?? 0)),
+						edit: this.attributeEdit(attribute),
 					})),
 				}
 			);
 		}
 		if (!development) return rows;
+		const { data, package: container } = development;
 
-		const proficiencies = development.proficiencies ?? [];
+		const proficiencies = data.proficiencies ?? [];
 		rows.push({
 			label: text('cyberpunk.row.skills'),
 			rows: skills.map(skill => {
@@ -118,6 +157,9 @@ class CyberpunkInspection implements Inspection {
 				return {
 					label: gameName('skill', skill),
 					value: formatValue(proficiency?.currentLevel ?? 1),
+					edit:
+						proficiency
+						&& container.locations.edit(proficiency, 'currentLevel', { minimum: 1, maximum: 60 }),
 					detail: proficiency?.currentExp
 						? text('cyberpunk.row.experience', { experience: proficiency.currentExp })
 						: undefined,
@@ -125,14 +167,20 @@ class CyberpunkInspection implements Inspection {
 			}),
 		});
 
-		const points = (type: string) =>
-			development.devPoints?.find(points => (points.type ?? 'Attribute') == type)?.unspent ?? 0;
+		const points = (label: string, type: string): Row => {
+			const found = data.devPoints?.find(points => (points.type ?? 'Attribute') == type);
+			return {
+				label,
+				value: formatValue(found?.unspent ?? 0),
+				edit: found && container.locations.edit(found, 'unspent', { safe: true, minimum: 0, maximum: 999 }),
+			};
+		};
 		rows.push({
 			label: text('cyberpunk.row.unspent'),
 			rows: [
-				{ label: text('cyberpunk.row.attribute_points'), value: formatValue(points('Attribute')) },
-				{ label: text('cyberpunk.row.perk_points'), value: formatValue(points('Primary')) },
-				{ label: text('cyberpunk.row.relic_points'), value: formatValue(points('Espionage')) },
+				points(text('cyberpunk.row.attribute_points'), 'Attribute'),
+				points(text('cyberpunk.row.perk_points'), 'Primary'),
+				points(text('cyberpunk.row.relic_points'), 'Espionage'),
 			],
 		});
 		return rows;
@@ -140,7 +188,8 @@ class CyberpunkInspection implements Inspection {
 
 	protected perks(): Row[] {
 		const rows: Row[] = [];
-		for (const data of this.playerDevelopment()?.attributesData ?? []) {
+		const development = this.playerDevelopment();
+		for (const data of development?.data.attributesData ?? []) {
 			if (!data.type) continue;
 			const unlocked = (data.unlockedPerks ?? []).filter(perk => perk.type && (perk.currLevel ?? 0) > 0);
 			if (!unlocked.length) continue;
@@ -150,6 +199,7 @@ class CyberpunkInspection implements Inspection {
 				rows: unlocked.map(perk => ({
 					label: gameName('perk', perk.type!),
 					value: text('cyberpunk.row.perk_level', { level: perk.currLevel! }),
+					edit: development!.package.locations.edit(perk, 'currLevel', { minimum: 0, maximum: 3 }),
 				})),
 			});
 		}
@@ -242,15 +292,18 @@ class CyberpunkInspection implements Inspection {
 	protected nodeEntry(node: SaveNode, factNames: Map<number, string>): Entry {
 		const payload = (): Entry[] => {
 			if (this.save.isPackage(node)) {
-				return this.save.package(node).objects.map((object, i) => packageEntry(String(i), object));
+				const container = this.save.package(node);
+				return container.objects.map((object, i) => packageEntry(String(i), object, container));
 			}
 			if (node.name != 'FactsTable') return [];
-			const facts = [...readFactsTable(this.save.nodeData(node))];
+			const data = this.save.nodeData(node);
+			const facts = readFacts(data);
 			return rangeEntries(facts.length, i => {
-				const [hash, value] = facts[i];
+				const { hash, value, offset } = facts[i];
 				return {
 					name: factNames.get(hash) ?? `0x${hash.toString(16).padStart(8, '0')}`,
 					summary: String(value),
+					edit: binaryEdit({ data, offset, type: 'i32' }),
 				};
 			});
 		};
@@ -271,7 +324,7 @@ class CyberpunkInspection implements Inspection {
 			name: basename(this.directory),
 			summary: '',
 			children: () => [
-				valueEntry('metadata', this.raw),
+				this.document?.entry('metadata', this.raw) ?? valueEntry('metadata', {}),
 				valueEntry('header', header),
 				{
 					name: 'nodes',
@@ -280,6 +333,20 @@ class CyberpunkInspection implements Inspection {
 				},
 			],
 		};
+	}
+
+	public write(path: string): void {
+		this.file?.write(join(path, 'sav.dat'));
+		if (!this.document?.changed || !this.metadataPath) return;
+		const target = join(path, basename(this.metadataPath));
+		if (path == this.directory) return writeFileSync(target, this.document.toString());
+
+		// A copy's metadata has its own slot name.
+		const name = this.document.edit(this.raw, 'name')!;
+		const previous = name.value;
+		name.set(basename(path));
+		writeFileSync(target, this.document.toString());
+		name.set(previous);
 	}
 }
 
@@ -291,4 +358,11 @@ export const inspector: Inspector = {
 		return basename(file) == 'sav.dat' && existsSync(file);
 	},
 	open: path => new CyberpunkInspection(path),
+	copy(path) {
+		const folder = statSync(path).isDirectory() ? path : dirname(path);
+		const target = join(dirname(folder), slots.nextManual(dirname(folder)));
+		copySave(folder, target);
+		slots.rename(target, basename(folder));
+		return target;
+	},
 };

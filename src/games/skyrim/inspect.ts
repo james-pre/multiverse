@@ -1,7 +1,8 @@
-import { closeSync, openSync, readSync } from 'node:fs';
-import { basename } from 'node:path';
+import { closeSync, openSync, readdirSync, readSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { decodeUTF8 } from 'utilium';
 import { bytes } from 'utilium/format';
+import { copySave, propertyEdit, type Edit, type NumberType } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
@@ -12,7 +13,18 @@ import { GlobalDataType, getGlobal, tableEntries } from './global-data.js';
 import { StatCategory } from './globals/misc-stats.js';
 import { SaveFile } from './save-file.js';
 import { fileTimeToInstant, parsePlayTime, raceName } from './strings.js';
-import { CompressionType, PlayerSex, type SaveBody } from './structs.js';
+import { CompressionType, PlayerSex, SaveBody } from './structs.js';
+
+/** Header fields that can be changed, with their types */
+const headerFields: Record<string, NumberType> = {
+	saveNumber: 'u32',
+	playerLevel: 'u32',
+	playerCurExp: 'f32',
+	playerLvlUpExp: 'f32',
+};
+
+/** Save file names, which start with the kind of save and its number, like `Save38_` */
+const fileNamePattern = /^([A-Za-z]+)(\d+)_(.*)$/;
 
 const sections = {
 	character: {
@@ -27,14 +39,23 @@ const sections = {
 class SkyrimInspection implements Inspection {
 	protected readonly file: SaveFile;
 	protected parsed?: SaveBody;
+	/** The decompressed body, which changes to it are made in */
+	protected bodyData?: Uint8Array;
 
 	public constructor(protected readonly path: string) {
 		this.file = new SaveFile(path);
 	}
 
 	protected get body(): SaveBody {
-		this.parsed ??= this.file.parseBody();
+		if (this.parsed) return this.parsed;
+		this.bodyData = this.file.body();
+		this.parsed = new SaveBody(this.bodyData.buffer, this.bodyData.byteOffset, this.bodyData.byteLength);
 		return this.parsed;
+	}
+
+	protected headerEdit(field: string): Edit | undefined {
+		const type = headerFields[field];
+		return type && propertyEdit(this.file.header, field, { type, minimum: field == 'playerLevel' ? 1 : undefined });
 	}
 
 	protected character(): Row[] {
@@ -45,6 +66,7 @@ class SkyrimInspection implements Inspection {
 			{
 				label: text('skyrim.row.level'),
 				value: formatValue(header.playerLevel),
+				edit: this.headerEdit('playerLevel'),
 				detail: text('skyrim.row.experience', {
 					current: Math.round(header.playerCurExp),
 					next: Math.round(header.playerLvlUpExp),
@@ -76,7 +98,11 @@ class SkyrimInspection implements Inspection {
 				label: text(`skyrim.stat_category.${StatCategory[category]}`, {
 					$default: StatCategory[category] ?? String(category),
 				}),
-				rows: stats.map(stat => ({ label: stat.name.toString(), value: formatValue(stat.value) })),
+				rows: stats.map(stat => ({
+					label: stat.name.toString(),
+					value: formatValue(stat.value),
+					edit: propertyEdit(stat, 'value', { type: 'i32' }),
+				})),
 			}));
 	}
 
@@ -163,11 +189,14 @@ class SkyrimInspection implements Inspection {
 		);
 		const forms = Array.from(body.changeForms);
 		const globals = [body.globalDataTable1, body.globalDataTable2, body.globalDataTable3];
+		const header = this.header();
 		return {
 			name: basename(this.path),
 			summary: '',
 			children: () => [
-				valueEntry('header', this.header()),
+				valueEntry('header', header, {
+					edit: (container, key) => (container === header ? this.headerEdit(String(key)) : undefined),
+				}),
 				valueEntry('plugins', Array.from(body.pluginInfo.plugins, formatString)),
 				valueEntry('light plugins', Array.from(body.lightPluginInfo.plugins, formatString)),
 				valueEntry('file location table', locations),
@@ -184,6 +213,10 @@ class SkyrimInspection implements Inspection {
 				},
 			],
 		};
+	}
+
+	public write(path: string): void {
+		this.file.write(path, this.bodyData ?? this.file.body());
 	}
 }
 
@@ -208,5 +241,16 @@ export const inspector: Inspector = {
 
 	decompress(path) {
 		return new SaveFile(path).body();
+	},
+
+	copy(path) {
+		const directory = dirname(path);
+		const name = basename(path);
+		const match = fileNamePattern.exec(name);
+		if (!match) throw new Error(`Can not tell what to call a copy of ${name}`);
+		const numbers = readdirSync(directory).map(file => Number(/^Save(\d+)_/.exec(file)?.[1] ?? 0));
+		const target = join(directory, `Save${Math.max(0, ...numbers) + 1}_${match[3]}`);
+		copySave(path, target, [path.replace(/\.ess$/i, '.skse')]);
+		return target;
 	},
 };

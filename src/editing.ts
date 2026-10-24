@@ -295,8 +295,9 @@ function stem(path: string): string {
  */
 export function copySave(path: string, target: string, companions: string[] = []): void {
 	if (existsSync(target)) throw new Error(`${target} already exists`);
-	const from = stem(path);
-	const to = stem(target);
+	const isWhole = companions.every(companion => basename(companion).startsWith(basename(path)));
+	const from = isWhole ? basename(path) : stem(path);
+	const to = isWhole ? basename(target) : stem(target);
 	const companionTargets = companions.map(companion => {
 		const name = basename(companion);
 		if (!name.startsWith(from)) throw new Error(`Can not tell what to call the copy of ${name}`);
@@ -307,4 +308,18 @@ export function copySave(path: string, target: string, companions: string[] = []
 		if (existsSync(companion))
 			cpSync(companion, companionTargets[i], { recursive: true, errorOnExist: true, force: false });
 	});
+}
+
+/** An edit that also changes other copies of the value, such as one in a summary the game shows before loading */
+export function linkedEdit(main: Edit, others: (Edit | undefined)[]): Edit {
+	return {
+		...main,
+		get value() {
+			return main.value;
+		},
+		set(value) {
+			main.set(value);
+			for (const other of others) other?.set(main.value);
+		},
+	};
 }

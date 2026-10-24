@@ -1,11 +1,12 @@
 import * as io from 'ioium';
-import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { existsSync, readdirSync, readFileSync, renameSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';
 import type { Game } from '../index.js';
 import { inspector } from './inspect.js';
 import { describeObjective, findMetadata, lifePathName, Metadata, parseTimestamp } from './metadata.js';
+import * as slots from './slots.js';
 
 const kinds: Record<string, string> = {
 	ManualSave: 'manual',
@@ -51,22 +52,9 @@ function readSave(directory: string): Save | undefined {
 
 /** Move a save into the next free manual slot, so the game can't overwrite it. */
 export function convertToManual(save: Save): void {
-	const directory = dirname(save.path);
-	const slots = readdirSync(directory)
-		.map(name => /^ManualSave-(\d+)$/.exec(name))
-		.filter(match => !!match)
-		.map(match => Number(match[1]));
-	const name = `ManualSave-${Math.max(-1, ...slots) + 1}`;
-
-	const metadataPath = findMetadata(save.path);
-	if (!metadataPath) throw new Error(`${save.name} has no metadata`);
-	const metadata = readFileSync(metadataPath, 'utf8');
-	const nameField = `"name": "${save.name}"`;
-	if (!metadata.includes(nameField)) throw new Error(`Could not find the slot name in ${metadataPath}`);
-
-	const target = join(directory, name);
+	const target = join(dirname(save.path), slots.nextManual(dirname(save.path)));
 	renameSync(save.path, target);
-	writeFileSync(join(target, basename(metadataPath)), metadata.replace(nameField, `"name": "${name}"`));
+	slots.rename(target, save.name);
 }
 
 export const cyberpunk: Game = {

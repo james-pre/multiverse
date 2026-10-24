@@ -1,4 +1,5 @@
 import { decodeUTF8 } from 'utilium';
+import { Locations, type NumberType } from '../../editing.js';
 import { Reader } from './reader.js';
 
 /* Reads REDengine packages, which serialize objects along with the names of their types and fields. */
@@ -32,6 +33,23 @@ const fixedSizes: Record<string, number> = {
 	CRUID: 8,
 };
 
+/** How values of fixed-size types are stored, for changing them where they are */
+const numberTypes: Record<string, NumberType> = {
+	Bool: 'bool',
+	Int8: 'i8',
+	Uint8: 'u8',
+	Int16: 'i16',
+	Uint16: 'u16',
+	Int32: 'i32',
+	Uint32: 'u32',
+	Int64: 'i64',
+	Uint64: 'u64',
+	Float: 'f32',
+	Double: 'f64',
+	TweakDBID: 'u64',
+	CRUID: 'u64',
+};
+
 interface Field {
 	name: string;
 	type: string;
@@ -47,6 +65,8 @@ export class Package {
 	public readonly names: string[] = [];
 	/** The objects in the package, the first of which is usually the root */
 	public readonly objects: Instance[] = [];
+	/** Where the values of fixed-size types are in the package's data */
+	public readonly locations = new Locations();
 	protected readonly fixups: { container: object; key: string | number; index: number }[] = [];
 
 	public constructor(data: Uint8Array) {
@@ -137,10 +157,18 @@ export class Package {
 		for (const [i, field] of fields.entries()) {
 			reader.offset = start + field.offset;
 			const fieldEnd = i + 1 < fields.length ? start + fields[i + 1].offset : end;
+			this.locate(object, field.name, reader, field.type);
 			this.assign(object, field.name, this.readValue(reader, field.type, fieldEnd));
 		}
 		reader.offset = end;
 		return object;
+	}
+
+	/** Records where a value of a fixed-size type starts, which is at the reader's position */
+	protected locate(container: object, key: string | number, reader: Reader, type: string): void {
+		const numberType = numberTypes[type];
+		if (numberType)
+			this.locations.set(container, key, { data: reader.data, offset: reader.offset, type: numberType });
 	}
 
 	protected assign(container: object, key: string | number, value: unknown): void {
@@ -212,6 +240,7 @@ export class Package {
 		const array: unknown[] = [];
 		for (let i = 0; i < count; i++) {
 			const elementEnd = this.valueEnd(reader, type, end);
+			this.locate(array, i, reader, type);
 			this.assign(array, i, this.readValue(reader, type, elementEnd));
 			reader.offset = elementEnd;
 		}

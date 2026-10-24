@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { decodeUTF8 } from 'utilium';
+import { Locations, type NumberType } from './editing.js';
 import { valueEntry, type Entry } from './inspection.js';
 
 /* Reads the .NET Remoting Binary Format (MS-NRBF), which `BinaryFormatter` writes. */
@@ -82,6 +83,23 @@ const typedArrays: Partial<Record<PrimitiveType, { BYTES_PER_ELEMENT: number; ne
 	[PrimitiveType.Double]: Float64Array,
 };
 
+/** How primitives of fixed-size types are stored, for changing them where they are */
+const numberTypes: Partial<Record<PrimitiveType, NumberType>> = {
+	[PrimitiveType.Boolean]: 'bool',
+	[PrimitiveType.Byte]: 'u8',
+	[PrimitiveType.SByte]: 'i8',
+	[PrimitiveType.Int16]: 'i16',
+	[PrimitiveType.UInt16]: 'u16',
+	[PrimitiveType.Int32]: 'i32',
+	[PrimitiveType.UInt32]: 'u32',
+	[PrimitiveType.Int64]: 'i64',
+	[PrimitiveType.UInt64]: 'u64',
+	[PrimitiveType.Single]: 'f32',
+	[PrimitiveType.Double]: 'f64',
+	[PrimitiveType.TimeSpan]: 'i64',
+	[PrimitiveType.DateTime]: 'u64',
+};
+
 interface MemberType {
 	binaryType: BinaryType;
 	primitiveType?: PrimitiveType;
@@ -110,6 +128,8 @@ class Reader {
 	protected readonly view: DataView;
 	protected readonly classes = new Map<number, ClassMetadata>();
 	public readonly objects = new Map<number, unknown>();
+	/** Where the primitives of fixed-size types are in the data */
+	public readonly locations = new Locations();
 	protected readonly fixups: { container: object; key: number | string; id: number }[] = [];
 
 	public constructor(protected readonly data: Uint8Array) {
@@ -197,8 +217,12 @@ class Reader {
 	protected primitiveArray(type: PrimitiveType, length: number): unknown {
 		const TypedArray = typedArrays[type];
 		if (!TypedArray) return Array.from({ length }, () => this.primitive(type));
+		const offset = this.offset;
 		const bytes = this.bytes(length * TypedArray.BYTES_PER_ELEMENT);
-		return new TypedArray(new Uint8Array(bytes).buffer);
+		const array = new TypedArray(new Uint8Array(bytes).buffer) as object;
+		const numberType = numberTypes[type];
+		if (numberType) this.locations.setArray(array, { data: this.data, offset, type: numberType });
+		return array;
 	}
 
 	protected memberTypes(count: number): MemberType[] {
@@ -242,6 +266,9 @@ class Reader {
 		const { memberNames, memberTypes } = metadata;
 		for (let i = 0; i < memberNames.length; i++) {
 			const type = memberTypes?.[i];
+			const numberType = type?.binaryType == BinaryType.Primitive ? numberTypes[type.primitiveType!] : undefined;
+			if (numberType)
+				this.locations.set(object, memberNames[i], { data: this.data, offset: this.offset, type: numberType });
 			const value = type?.binaryType == BinaryType.Primitive ? this.primitive(type.primitiveType!) : this.value();
 			object[memberNames[i]] = this.stored(object, memberNames[i], value);
 		}
@@ -357,14 +384,26 @@ class Reader {
 	}
 }
 
-/** Deserializes a `BinaryFormatter` stream, returning its root object. */
-export function parse(data: Uint8Array): unknown {
+/** A deserialized stream, with where its primitives are so they can be changed in `data` */
+export interface Document {
+	root: unknown;
+	data: Uint8Array;
+	locations: Locations;
+}
+
+/** Deserializes a `BinaryFormatter` stream, keeping where its primitives are. */
+export function read(data: Uint8Array): Document {
 	const reader = new Reader(data);
 	const header = reader.record();
 	if (!(header instanceof Reference)) throw new Error('Not a BinaryFormatter stream');
 	while (reader.record() !== end);
 	reader.resolve();
-	return reader.objects.get(header.id);
+	return { root: reader.objects.get(header.id), data, locations: reader.locations };
+}
+
+/** Deserializes a `BinaryFormatter` stream, returning its root object. */
+export function parse(data: Uint8Array): unknown {
+	return read(data).root;
 }
 
 const assemblyPattern = /,\s*[\w.]+,\s*Version=[^,\]]+,\s*Culture=[^,\]]+,\s*PublicKeyToken=\w+/g;
@@ -393,14 +432,22 @@ export function isEnum(value: unknown): value is Instance & { value__: number } 
 	return members.length == 1 && members[0] == 'value__';
 }
 
-/** Describes a deserialized value for inspection, showing lists as their items and enums by their values */
-export function entry(name: string, value: unknown): Entry {
+/**
+ * Describes a deserialized value for inspection, showing lists as their items and enums by their values.
+ * @param locations Where the stream's primitives are, so they can be changed
+ */
+export function entry(name: string, value: unknown, locations?: Locations): Entry {
 	return valueEntry(name, value, {
 		typeOf: value => (isInstance(value) ? shortTypeName(value[className]) : undefined),
 		simplify(value) {
 			const items = listItems(value);
-			return items && Array.from(items);
+			if (!items) return;
+			const copy = Array.from(items);
+			if (isInstance(value) && typeof value._items == 'object' && value._items)
+				locations?.alias(copy, value._items);
+			return copy;
 		},
+		edit: (container, key) => locations?.edit(container, key),
 		summarize: value => (isEnum(value) ? `${shortTypeName(value[className])}(${value.value__})` : undefined),
 	});
 }

@@ -40,11 +40,17 @@ export function savePath(path: string): string {
 	return path.endsWith('.dat') ? path.slice(0, -4) : path;
 }
 
-export function readContainer(path: string): SaveContainer {
-	const container = nrbf.parse(readFileSync(path));
+/** Reads a save, keeping where its values are so they can be changed */
+export function openContainer(path: string): { container: SaveContainer; document: nrbf.Document } {
+	const document = nrbf.read(readFileSync(path));
+	const container = document.root;
 	if (!nrbf.isInstance(container) || container[nrbf.className] != 'Utility.SaveContainer')
 		throw new Error('Not a save');
-	return container as SaveContainer;
+	return { container: container as SaveContainer, document };
+}
+
+export function readContainer(path: string): SaveContainer {
+	return openContainer(path).container;
 }
 
 /** Whether a file starts like a save, without reading all of it */
