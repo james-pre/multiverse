@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { suite, test } from 'node:test';
@@ -49,6 +49,29 @@ suite('steam', () => {
 		assert.equal(steam.shortPath(prefix), 'S:');
 		assert.equal(steam.shortPath('/home/user/saves'), '/home/user/saves');
 	});
+	test('saveDirectories expands wildcards and finds install folders', () => {
+		const root = mkdtempSync(join(tmpdir(), 'multiverse-'));
+		try {
+			mkdirSync(join(root, 'steamapps'));
+			writeFileSync(
+				join(root, 'steamapps/appmanifest_264710.acf'),
+				'"AppState" { "appid" "264710" "installdir" "Subnautica" }'
+			);
+			for (const account of ['111', '222']) {
+				mkdirSync(join(root, 'steamapps/common/Subnautica/Saves', account), { recursive: true });
+			}
+			const library = { path: root, apps: new Set([264710]) };
+			const found = steam.saveDirectories({ id: 264710, saves: 'Saves/*', installed: true }, [library]);
+			assert.deepEqual(found.toSorted(), [
+				join(root, 'steamapps/common/Subnautica/Saves/111'),
+				join(root, 'steamapps/common/Subnautica/Saves/222'),
+			]);
+			assert.equal(steam.shortPath(found.toSorted()[0]), join('Steam', 'Subnautica/Saves/111'));
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
+	});
+
 	test('cloudDirectories finds the folder of each account, and shortPath shortens them', () => {
 		const root = mkdtempSync(join(tmpdir(), 'multiverse-'));
 		try {

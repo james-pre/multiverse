@@ -1,13 +1,17 @@
+import { configCommand } from '@james-pre/config/cli';
 import { Command, Option } from 'commander';
 import * as io from 'ioium/node';
 import { writeFileSync } from 'node:fs';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
+import { Archive, autoArchive } from './archive.js';
 import { defaultDataDirectory, installEntry, uninstallEntry, uninstallPackage } from './desktop.js';
 import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
 import { text } from './i18n.js';
 import { entryLines, sectionLines } from './inspection.js';
+import type { Save } from './save.js';
+import { settings } from './settings.js';
 import { Timeline } from './timeline.js';
 
 interface ScanOptions {
@@ -31,6 +35,11 @@ function locate(options: ScanOptions): SaveLocation[] {
 	return [{ game, directory }];
 }
 
+/** The saves at a location, including archived ones for games whose saves can be archived */
+function scan({ game, directory }: SaveLocation): Save[] {
+	return game.archive ? new Archive({ game, directory }).scan() : game.scan(directory);
+}
+
 function printTimeline(game: Game, timeline: Timeline): void {
 	io.log(styleText('bold', `${game.describe(timeline)} (${text('common.saves', { count: timeline.nodes.length })})`));
 
@@ -44,6 +53,7 @@ function printTimeline(game: Game, timeline: Timeline): void {
 				+ '  '
 				+ styleText('dim', time.padEnd(20))
 				+ save.label
+				+ (save.inGame === false ? styleText('dim', ` (${text('archive.archived')})`) : '')
 		);
 	}
 }
@@ -61,9 +71,32 @@ cli.command('tree')
 		const located = locate(options);
 		if (!located.length) io.exit('Could not find saves for any supported game, use --game and --directory');
 
-		for (const { game, directory } of located) {
-			const saves = io.track(`Scanning ${game.name} saves in ${directory}`, () => game.scan(directory));
+		for (const location of located) {
+			const { game, directory } = location;
+			const saves = io.track(`Scanning ${game.name} saves in ${directory}`, () => scan(location));
 			for (const timeline of Timeline.fromSaves(saves)) printTimeline(game, timeline);
+		}
+	});
+
+cli.command('archive')
+	.description('Copy the saves of games that save over their saves into the archive')
+	.addOption(gameOption)
+	.addOption(directoryOption)
+	.option('-w, --watch', 'Keep archiving saves as the games write them')
+	.action(options => {
+		const located = locate(options).filter(({ game }) => game.archive);
+		if (!located.length) io.exit('Could not find saves for any game whose saves can be archived');
+
+		if (options.watch) {
+			autoArchive(located, new AbortController().signal, (location, saves) => {
+				for (const save of saves) io.log(`Archived ${location.game.name} ${save.name}`);
+			});
+			return;
+		}
+
+		for (const location of located) {
+			const added = io.track(`Archiving ${location.game.name} saves`, () => new Archive(location).addAll());
+			for (const save of added) io.log(`Archived ${save.name}`);
 		}
 	});
 
@@ -150,5 +183,7 @@ cli.command('uninstall')
 		for (const path of uninstallEntry(options.dataDirectory)) io.log('Removed', path);
 		if (options.package) uninstallPackage();
 	});
+
+configCommand(cli, settings, { defaultType: 'user' });
 
 export default cli;

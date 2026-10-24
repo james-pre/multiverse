@@ -37,42 +37,42 @@ export interface SaveFolder {
 	completedQuests: string[];
 }
 
-/** A file in the folder, or nothing if it is missing, which it is in saves from older versions */
-function readPart(folder: string, name: string): Record<string, unknown> {
+/** A file in the folder, with nothing in it if it is missing, which some are in saves from older versions */
+function readPart<Part>(folder: string, name: string): Partial<Part> {
 	const path = join(folder, `${name}.json`);
 	if (!existsSync(path)) return {};
-	return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
+	return JSON.parse(readFileSync(path, 'utf8')) as Partial<Part>;
 }
 
-function dateTime(data: unknown): Temporal.PlainDateTime | undefined {
-	if (typeof data != 'object' || !data) return;
-	const { Year: year, Month: month, Day: day, Hour: hour, Minute: minute, Second: second } = data as DateTimeData;
+function dateTime(data?: DateTimeData): Temporal.PlainDateTime | undefined {
+	if (!data) return;
+	const { Year: year, Month: month, Day: day, Hour: hour, Minute: minute, Second: second } = data;
 	return Temporal.PlainDateTime.from({ year, month, day, hour, minute, second });
 }
 
 export function readSaveFolder(folder: string): SaveFolder {
 	if (!existsSync(join(folder, 'Game.json'))) throw new Error('Not a Schedule I save');
-	const game = readPart(folder, 'Game');
-	const metadata = readPart(folder, 'Metadata');
-	const time = readPart(folder, 'Time');
-	const money = readPart(folder, 'Money');
-	const rank = readPart(folder, 'Rank');
-	const quests = (readPart(folder, 'Quests').Quests ?? []) as QuestData[];
+	const game = readPart<{ OrganisationName: string; Seed: number; GameVersion: string }>(folder, 'Game');
+	const metadata = readPart<{ CreationDate: DateTimeData; LastPlayedDate: DateTimeData }>(folder, 'Metadata');
+	const time = readPart<{ Playtime: number; ElapsedDays: number }>(folder, 'Time');
+	const money = readPart<{ OnlineBalance: number; Networth: number; LifetimeEarnings: number }>(folder, 'Money');
+	const rank = readPart<{ Rank: number; Tier: number; TotalXP: number }>(folder, 'Rank');
+	const { Quests: quests = [] } = readPart<{ Quests: QuestData[] }>(folder, 'Quests');
 
 	return {
-		organisation: String(game.OrganisationName ?? ''),
-		seed: Number(game.Seed ?? 0),
-		version: String(game.GameVersion ?? ''),
+		organisation: game.OrganisationName ?? '',
+		seed: game.Seed ?? 0,
+		version: game.GameVersion ?? '',
 		created: dateTime(metadata.CreationDate),
 		lastPlayed: dateTime(metadata.LastPlayedDate),
-		playTime: Number(time.Playtime ?? 0),
-		day: Number(time.ElapsedDays ?? 0),
-		balance: Number(money.OnlineBalance ?? 0),
-		networth: Number(money.Networth ?? 0),
-		earnings: money.LifetimeEarnings === undefined ? undefined : Number(money.LifetimeEarnings),
-		rank: Number(rank.Rank ?? 0),
-		tier: Number(rank.Tier ?? 0),
-		experience: Number(rank.TotalXP ?? 0),
+		playTime: time.Playtime ?? 0,
+		day: time.ElapsedDays ?? 0,
+		balance: money.OnlineBalance ?? 0,
+		networth: money.Networth ?? 0,
+		earnings: money.LifetimeEarnings,
+		rank: rank.Rank ?? 0,
+		tier: rank.Tier ?? 0,
+		experience: rank.TotalXP ?? 0,
 		completedQuests: quests.filter(quest => quest.State == 2).map(quest => quest.GUID),
 	};
 }

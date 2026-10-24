@@ -1,6 +1,16 @@
 import * as io from 'ioium';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, watch, writeFileSync } from 'node:fs';
+import {
+	cpSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	watch,
+	writeFileSync,
+} from 'node:fs';
 import { isAbsolute, join, relative, sep } from 'node:path';
 import type { Game, SaveLocation } from './games/index.js';
 import { dataDirectory } from './paths.js';

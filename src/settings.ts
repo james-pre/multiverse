@@ -10,5 +10,8 @@ export const settings = new Manager(
 	{ xdg: 'multiverse/settings' }
 );
 
-settings.on('load_error', (path, stage, error) => io.warn(`Could not ${stage} ${path}: ${io.errorText(error)}`));
+settings.on('load_error', (path, stage, error) => {
+	if ((error as NodeJS.ErrnoException).code != 'ENOENT')
+		io.warn(`Could not ${stage} ${path}: ${io.errorText(error)}`);
+});
 settings.loadDefaults({ loose: true });

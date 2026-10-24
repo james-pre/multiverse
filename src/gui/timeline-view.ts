@@ -204,12 +204,16 @@ export class TimelineView extends Gtk.Widget {
 	protected drawSaves(snapshot: Gtk.Snapshot, colors: Palette): void {
 		const nodesByKind = Map.groupBy(this.timeline.nodes, node => node.save.kind);
 		for (const [kind, nodes] of nodesByKind) {
-			const builder = new Gsk.PathBuilder();
+			const filled = new Gsk.PathBuilder();
+			const hollow = new Gsk.PathBuilder();
 			for (const node of nodes) {
 				const radius = this.viewport.nodeRadius * (node === this.hovered ? 1.5 : 1);
-				builder.addCircle(point(this.viewport.position(node)), radius);
+				if (node.save.inGame === false) hollow.addCircle(point(this.viewport.position(node)), radius - 1);
+				else filled.addCircle(point(this.viewport.position(node)), radius);
 			}
-			snapshot.appendFill(builder.toPath(), Gsk.FillRule.winding, rgba(kindColors[kind] ?? '#77767b'));
+			const color = rgba(kindColors[kind] ?? '#77767b');
+			snapshot.appendFill(filled.toPath(), Gsk.FillRule.winding, color);
+			snapshot.appendStroke(hollow.toPath(), new Gsk.Stroke(2), color);
 		}
 
 		if (!this.selected) return;

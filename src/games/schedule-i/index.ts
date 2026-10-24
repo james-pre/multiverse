@@ -30,9 +30,9 @@ function readSave(directory: string, folderName: string): Save | undefined {
 	const zone = Temporal.Now.timeZoneId();
 	const time =
 		folder.lastPlayed?.toZonedDateTime(zone)
-		?? Temporal.Instant.fromEpochMilliseconds(Math.floor(statSync(join(path, 'Game.json')).mtimeMs)).toZonedDateTimeISO(
-			zone
-		);
+		?? Temporal.Instant.fromEpochMilliseconds(
+			Math.floor(statSync(join(path, 'Game.json')).mtimeMs)
+		).toZonedDateTimeISO(zone);
 
 	const counters: Record<string, number> = { day: folder.day, experience: folder.experience };
 	if (folder.earnings !== undefined) counters.earnings = folder.earnings;

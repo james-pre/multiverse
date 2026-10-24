@@ -31,10 +31,14 @@ export class MainWindow {
 		});
 	}
 
+	public toast(title: string): void {
+		this.toasts.addToast(new Adw.Toast(title));
+	}
+
 	public open(location: SaveLocation): void {
 		const timeline = new TimelinePage(
 			location,
-			title => this.toasts.addToast(new Adw.Toast(title)),
+			title => this.toast(title),
 			save => {
 				if (!location.game.inspector) return;
 				const inspector = new InspectorWindow(this.application, location.game.inspector, save);

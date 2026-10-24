@@ -1,17 +1,19 @@
 import { connect, disconnect } from 'girbind';
 import * as io from 'ioium';
-import { statSync, watch, type FSWatcher } from 'node:fs';
+import { mkdirSync, statSync, watch, type FSWatcher } from 'node:fs';
 import { dirname } from 'node:path';
 import * as Adw from '../../native/adw.js';
 import * as Gdk from '../../native/gdk.js';
 import * as Gio from '../../native/gio.js';
 import * as Gtk from '../../native/gtk.js';
+import { Archive } from '../archive.js';
 import type { SaveLocation } from '../games/index.js';
 import { text } from '../i18n.js';
 import type { Save } from '../save.js';
 import { Timeline, type TimelineNode } from '../timeline.js';
 import type { Point } from '../viewport.js';
 import { shortDate } from '../format.js';
+import { menuButton } from './preferences.js';
 import { SaveCard, type CardAction } from './save-card.js';
 import { TimelineView } from './timeline-view.js';
 
@@ -49,7 +51,8 @@ export class TimelinePage {
 	protected selected?: Save;
 	/** The save a context menu was opened for */
 	protected target?: Save;
-	protected watcher?: FSWatcher;
+	protected readonly archive?: Archive;
+	protected watchers: FSWatcher[] = [];
 	protected reloadTimer?: NodeJS.Timeout;
 	protected styleHandler: number;
 
@@ -67,8 +70,10 @@ export class TimelinePage {
 		protected readonly inspect: (save: Save) => void
 	) {
 		const { game } = location;
+		if (game.archive) this.archive = new Archive(location);
 		this.actions = [
 			...(game.inspector ? [{ id: 'inspect', label: text('action.inspect'), canRun: () => true }] : []),
+			...(this.archive ? this.archiveActions() : []),
 			...game.actions,
 			{ id: 'open', label: text('action.open'), canRun: () => true },
 			{ id: 'delete', label: text('action.delete'), isDestructive: true, canRun: () => true },
@@ -76,6 +81,7 @@ export class TimelinePage {
 
 		this.card = new SaveCard(game, this.actions);
 		this.card.onAction = (id, save) => this.run(id, save);
+		this.card.onToggleInGame = (save, inGame) => this.run(inGame ? 'put_in_game' : 'remove_from_game', save);
 
 		const group = new Gio.SimpleActionGroup();
 		for (const action of this.actions) {
@@ -111,6 +117,7 @@ export class TimelinePage {
 		this.split.setSidebar(sidebarScroll);
 		this.split.setContent(content);
 
+		this.header.packEnd(menuButton());
 		const toolbar = new Adw.ToolbarView();
 		toolbar.addTopBar(this.header);
 		toolbar.setContent(this.split);
@@ -126,7 +133,7 @@ export class TimelinePage {
 
 	/** Stop watching for changes and free the timelines, once the page is closed. */
 	public dispose(): void {
-		this.watcher?.close();
+		for (const watcher of this.watchers) watcher.close();
 		clearTimeout(this.reloadTimer);
 		disconnect(Adw.StyleManager.getDefault(), this.styleHandler);
 		for (const view of this.views) this.disposeView(view);
@@ -140,20 +147,43 @@ export class TimelinePage {
 		view.dispose();
 	}
 
+	protected archiveActions(): CardAction[] {
+		return [
+			{ id: 'archive', label: text('action.archive'), canRun: save => !!save.inGame && !save.archived },
+			{ id: 'put_in_game', label: text('action.put_in_game'), menuOnly: true, canRun: save => !save.inGame },
+			{
+				id: 'remove_from_game',
+				label: text('action.remove_from_game'),
+				menuOnly: true,
+				canRun: save => !!save.inGame,
+			},
+		];
+	}
+
+	/** Reload when the saves or the archive change, such as when the game saves. */
 	protected watch(): void {
-		try {
-			this.watcher = watch(this.directory, { recursive: true }, () => {
-				clearTimeout(this.reloadTimer);
-				this.reloadTimer = setTimeout(() => this.reload(), reloadDelay);
-			});
-		} catch (error) {
-			io.warn(`Not watching ${this.directory} for changes: ${io.errorText(error)}`);
+		const directories = [this.directory];
+		if (this.archive) {
+			mkdirSync(this.archive.directory, { recursive: true });
+			directories.push(this.archive.directory);
+		}
+		for (const directory of directories) {
+			try {
+				const watcher = watch(directory, { recursive: true }, () => {
+					clearTimeout(this.reloadTimer);
+					this.reloadTimer = setTimeout(() => this.reload(), reloadDelay);
+				});
+				this.watchers.push(watcher);
+			} catch (error) {
+				io.warn(`Not watching ${directory} for changes: ${io.errorText(error)}`);
+			}
 		}
 	}
 
 	/** Rescan the saves and update every timeline in place, keeping each one's zoom and the selection. */
 	public reload(): void {
-		const timelines = Timeline.fromSaves(this.game.scan(this.directory)).toSorted((a, b) =>
+		const saves = this.archive?.scan() ?? this.game.scan(this.directory);
+		const timelines = Timeline.fromSaves(saves).toSorted((a, b) =>
 			Temporal.ZonedDateTime.compare(latest(b).time, latest(a).time)
 		);
 		const previous = new Map(this.views.map(view => [view.timeline.playthrough, view]));
@@ -264,6 +294,10 @@ export class TimelinePage {
 		if (id == 'delete') return this.confirmDelete(save);
 		if (id == 'inspect') return this.inspect(save);
 		try {
+			if (this.archive && this.runArchiveAction(this.archive, id, save)) {
+				this.reload();
+				return;
+			}
 			if (id == 'open') {
 				const folder = statSync(save.path).isDirectory() ? save.path : dirname(save.path);
 				Gio.AppInfo.launchDefaultForUri(Gio.File.newForPath(folder).getUri(), null);
@@ -276,13 +310,39 @@ export class TimelinePage {
 			this.reload();
 		} catch (error) {
 			this.toast(io.errorText(error));
+			this.card.show(this.hovered ?? this.selected);
 		}
 	}
 
+	/** Run an action on the archive, returning whether `id` is one */
+	protected runArchiveAction(archive: Archive, id: string, save: Save): boolean {
+		switch (id) {
+			case 'archive':
+				archive.add(save);
+				this.toast(text('archive.done', { name: save.name }));
+				return true;
+			case 'put_in_game': {
+				const replaced = archive.putInGame(save);
+				this.toast(
+					replaced
+						? text('archive.replaced', { name: save.name, replaced: replaced.label || replaced.name })
+						: text('archive.put', { name: save.name })
+				);
+				return true;
+			}
+			case 'remove_from_game':
+				archive.removeFromGame(save);
+				this.toast(text('archive.removed', { name: save.name }));
+				return true;
+		}
+		return false;
+	}
+
 	protected confirmDelete(save: Save): void {
+		const label = save.label || save.name;
 		const dialog = new Adw.AlertDialog(
 			text('delete.heading', { name: save.name }),
-			text('delete.body', { label: save.label || save.name })
+			save.archived ? text('delete.body_archived', { label }) : text('delete.body', { label })
 		);
 		dialog.addResponse('cancel', text('delete.cancel'));
 		dialog.addResponse('delete', text('delete.confirm'));
@@ -292,7 +352,9 @@ export class TimelinePage {
 		connect(dialog, 'response', (_, response) => {
 			if (response != 'delete') return;
 			try {
-				for (const path of [save.path, ...(save.companions ?? [])]) Gio.File.newForPath(path).trash(null);
+				const files = save.inGame === false ? [] : [save.path, ...(save.companions ?? [])];
+				files.push(...(this.archive?.filesOf(save) ?? []));
+				for (const path of files) Gio.File.newForPath(path).trash(null);
 				this.toast(text('delete.done', { name: save.name }));
 				if (this.selected === save) this.selected = undefined;
 				this.reload();

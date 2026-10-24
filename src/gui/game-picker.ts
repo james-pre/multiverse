@@ -6,6 +6,7 @@ import * as Gtk from '../../native/gtk.js';
 import { findSaveDirectories, games, type SaveLocation } from '../games/index.js';
 import { text } from '../i18n.js';
 import * as steam from '../steam.js';
+import { menuButton } from './preferences.js';
 
 /** Shortens paths in Proton prefixes to start with `S:`, and paths in the user's home directory to start with `~`. */
 function abbreviate(path: string): string {
@@ -43,8 +44,10 @@ export class GamePicker {
 		const preferences = new Adw.PreferencesPage();
 		preferences.add(group);
 
+		const header = new Adw.HeaderBar();
+		header.packEnd(menuButton());
 		const toolbar = new Adw.ToolbarView();
-		toolbar.addTopBar(new Adw.HeaderBar());
+		toolbar.addTopBar(header);
 		toolbar.setContent(preferences);
 		this.page = new Adw.NavigationPage(toolbar, text('app.title'));
 	}

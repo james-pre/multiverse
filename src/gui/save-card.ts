@@ -12,6 +12,8 @@ export interface CardAction {
 	id: string;
 	label: string;
 	isDestructive?: boolean;
+	/** Whether the action is only in the context menu, since the card has another way to do it */
+	menuOnly?: boolean;
 	canRun(save: Save): boolean;
 }
 
@@ -27,6 +29,8 @@ function label(cssClass?: string): Gtk.Label {
 export class SaveCard {
 	public readonly widget = new Gtk.Stack();
 	public onAction?: (id: string, save: Save) => void;
+	/** Called when the save is put in or removed from the game with the card's switch */
+	public onToggleInGame?: (save: Save, inGame: boolean) => void;
 
 	protected save?: Save;
 	protected readonly picture = new Gtk.Picture();
@@ -35,6 +39,10 @@ export class SaveCard {
 	protected readonly slot = label('dim-label');
 	protected readonly details = label('dim-label');
 	protected readonly buttons = new Map<CardAction, Gtk.Button>();
+	protected readonly inGame = new Gtk.Box(Gtk.Orientation.horizontal, 8);
+	protected readonly inGameSwitch = new Gtk.Switch();
+	/** Set while showing a save, so setting the switch to match it isn't taken as a toggle */
+	protected updating = false;
 
 	public constructor(
 		protected readonly game: Game,
@@ -56,7 +64,18 @@ export class SaveCard {
 
 		const buttons = new Gtk.Box(Gtk.Orientation.vertical, 8);
 		buttons.setValign(Gtk.Align.center);
+		const inGameLabel = label();
+		inGameLabel.setLabel(text('archive.in_game'));
+		inGameLabel.setHexpand(true);
+		this.inGame.append(inGameLabel);
+		this.inGame.append(this.inGameSwitch);
+		connect(this.inGameSwitch, 'state-set', (_, state) => {
+			if (!this.updating && this.save) this.onToggleInGame?.(this.save, state);
+			return true;
+		});
+		buttons.append(this.inGame);
 		for (const action of actions) {
+			if (action.menuOnly) continue;
 			const button = Gtk.Button.newWithLabel(action.label);
 			if (action.isDestructive) button.addCssClass('destructive-action');
 			connect(button, 'clicked', () => this.save && this.onAction?.(action.id, this.save));
@@ -91,13 +110,20 @@ export class SaveCard {
 		this.title.setLabel(save.label || save.name);
 		const separator = text('card.separator');
 		this.summary.setLabel([hoursAndMinutes(save.playTime), ...save.highlights].join(separator));
-		this.slot.setLabel([save.name, shortDate(save.time)].join(separator));
+		this.slot.setLabel(
+			[save.name, shortDate(save.time), ...(save.archived ? [text('archive.archived')] : [])].join(separator)
+		);
 		this.details.setLabel(
 			Object.entries(save.details)
 				.map(([key, value]) => `${key}: ${formatValue(value)}`)
 				.join(separator)
 		);
 		for (const [action, button] of this.buttons) button.setVisible(action.canRun(save));
+		this.inGame.setVisible(save.inGame !== undefined);
+		this.updating = true;
+		this.inGameSwitch.setActive(!!save.inGame);
+		this.inGameSwitch.setState(!!save.inGame);
+		this.updating = false;
 		this.widget.setVisibleChildName('save');
 	}
 }

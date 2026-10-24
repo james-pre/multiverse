@@ -31,7 +31,7 @@ interface GameInfo {
 const builds = ['basePresent', 'seamothPresent', 'cyclopsPresent', 'exosuitPresent', 'rocketPresent'] as const;
 
 function readGameInfo(path: string): GameInfo {
-	const json = readFileSync(path, 'utf8').replace(/^﻿/, '');
+	const json = readFileSync(path, 'utf8').replace(/^\uFEFF/, '');
 	return JSON.parse(json, (key, value: unknown, context?: { source: string }) =>
 		key.endsWith('Ticks') && context ? context.source : value
 	) as GameInfo;
