@@ -22,11 +22,18 @@ export function run(location?: SaveLocation): void {
 
 	const app = new Adw.Application('dev.jamespre.SaveTimeline', Gio.ApplicationFlags.default_flags);
 
+	let main: MainWindow | undefined;
+
 	connect(app, 'activate', () => {
+		if (main) return main.window.present();
+
 		const hold = keepAlive();
-		const main = new MainWindow(app);
+		main = new MainWindow(app);
 		if (location) main.open(location);
-		connect(main.window, 'close-request', () => hold.release());
+		connect(main.window, 'close-request', () => {
+			main = undefined;
+			hold.release();
+		});
 		main.window.present();
 	});
 

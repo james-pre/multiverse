@@ -71,6 +71,15 @@ suite('Timeline', () => {
 		assert.equal(parentOf(timeline, 'reloaded'), 'root');
 	});
 
+	test('saves with higher counters than the descendant are not ancestors', () => {
+		const timeline = new Timeline([
+			{ ...save('root', 100, 0), counters: { quests: 1 } },
+			{ ...save('other branch', 200, 0), counters: { quests: 5 } },
+			{ ...save('reloaded', 250, 5), counters: { quests: 2 } },
+		]);
+		assert.equal(parentOf(timeline, 'reloaded'), 'root');
+	});
+
 	test('fromSaves splits playthroughs', () => {
 		const timelines = Timeline.fromSaves([save('a1', 1, 0), save('b1', 1, 0, [], 'b'), save('a2', 2, 0)]);
 		assert.deepEqual(

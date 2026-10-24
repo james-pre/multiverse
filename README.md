@@ -5,6 +5,7 @@ View game saves as branching timelines. Each playthrough is a tree, with saves a
 Supported games:
 
 - Cyberpunk 2077 (Steam).
+- The Elder Scrolls V: Skyrim Special Edition (Steam), including co-saves from the Skyrim Script Extender.
 
 ## Installation
 
@@ -24,9 +25,10 @@ npm only runs the install script, which adds a desktop entry and icon so Save Ti
 save-timeline                    # open the viewer, starting with a game picker
 save-timeline --game cyberpunk   # open a game's timelines directly
 save-timeline tree               # print the timelines of every game with saves
+save-timeline inspect <save>     # show what is in a save file (Skyrim)
 ```
 
-Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else.
+Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else. `inspect` takes the sections to show (by default all of them, e.g. `header plugins globals changes`), and `--decompressed <path>` writes the save's data without compression for other tools.
 
 In the viewer, scroll to zoom, drag to pan, and click a save to select it. The card at the bottom shows the hovered or selected save, with buttons to make an automatic or quick save manual, open its folder, or move it to the trash. Right-clicking a save shows the same actions. The viewer reloads when saves change on disk.
 
