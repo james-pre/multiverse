@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
-import { copySave } from '../../editing.js';
+import { copySave, linkedEdit, type Edit } from '../../editing.js';
 import { formatValue, hoursAndMinutes } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
@@ -32,10 +32,22 @@ class DinoInspection implements Inspection {
 	protected readonly path: string;
 	protected readonly container: SaveContainer;
 	protected readonly document: nrbf.Document;
+	/** The header the game lists the save with, which has some of the save's values */
+	protected readonly header?: nrbf.Document;
 
 	public constructor(path: string) {
 		this.path = savePath(path);
 		({ container: this.container, document: this.document } = openContainer(this.path));
+		const headerPath = `${this.path}.dat`;
+		if (existsSync(headerPath)) this.header = nrbf.read(readFileSync(headerPath));
+	}
+
+	/** The difficulty's index in the mission's difficulties, changing it in the header too */
+	protected difficultyEdit(): Edit | undefined {
+		// The game falls back to a valid difficulty when the index is out of range.
+		const main = this.document.locations.edit(this.container, 'difficultyIndex', { safe: true, minimum: 0 });
+		const root = this.header?.root;
+		return main && linkedEdit(main, [nrbf.isInstance(root) ? this.header!.locations.edit(root, 'difficultyId') : undefined]);
 	}
 
 	protected session(): Row[] {
@@ -44,7 +56,11 @@ class DinoInspection implements Inspection {
 		const rows: Row[] = [
 			{ label: text('dinao.row.mission'), value: String(container.missionIndex) },
 			{ label: text('dinao.row.map_seed'), value: String(container.mapSeed) },
-			{ label: text('dinao.row.difficulty'), value: formatValue(container.difficultyIndex) },
+			{
+				label: text('dinao.row.difficulty'),
+				value: formatValue(container.difficultyIndex),
+				edit: this.difficultyEdit(),
+			},
 		];
 		if (sessionTime.elapsedTimeUnscaled !== undefined) {
 			rows.push({ label: text('dinao.row.play_time'), value: hoursAndMinutes(sessionTime.elapsedTimeUnscaled) });
@@ -122,12 +138,12 @@ class DinoInspection implements Inspection {
 	}
 
 	public contents(): Entry {
-		const headerPath = `${this.path}.dat`;
+		const { header } = this;
 		return {
 			name: basename(this.path),
 			summary: '',
 			children: () => [
-				...(existsSync(headerPath) ? [nrbf.entry('header', nrbf.parse(readFileSync(headerPath)))] : []),
+				...(header ? [nrbf.entry('header', header.root, header.locations)] : []),
 				nrbf.entry('save', this.container, this.document.locations),
 			],
 		};
@@ -135,6 +151,7 @@ class DinoInspection implements Inspection {
 
 	public write(path: string): void {
 		writeFileSync(savePath(path), this.document.data);
+		if (this.header) writeFileSync(`${savePath(path)}.dat`, this.header.data);
 	}
 }
 
