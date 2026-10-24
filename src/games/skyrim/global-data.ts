@@ -2,6 +2,7 @@ import type { ArrayOf, InstanceOf, StructConstructor } from 'memium';
 import { struct, types as t } from 'memium';
 import type { Entries } from 'utilium';
 import { bytes } from 'utilium/format';
+import { propertyEdit, type NumberType } from '../../editing.js';
 import type { Entry } from '../../inspection.js';
 import { formatNumber } from './format.js';
 import * as globals from './globals/index.js';
@@ -226,7 +227,78 @@ export function* dumpGlobal<T extends GlobalDataType>(
 	}
 }
 
-/** Describes each global in a table, with the lines describing its data as children */
+type Crime = InstanceOf<typeof globals.Crime>;
+
+/** A crime's values, with edits for those that can be changed */
+export function crimeEntries(crime: Crime): Entry[] {
+	const number = (
+		name: 'witnessNum' | 'quantity' | 'serialNum' | 'elapsedTime' | 'bounty',
+		type: NumberType
+	): Entry => ({
+		name,
+		summary: String(crime[name]),
+		edit: propertyEdit(crime, name, { type }),
+	});
+	return [
+		number('witnessNum', 'u32'),
+		{ name: 'crimeType', summary: globals.CrimeType[crime.crimeType] ?? String(crime.crimeType) },
+		number('quantity', 'u32'),
+		number('serialNum', 'u32'),
+		number('elapsedTime', 'f32'),
+		{ name: 'victimID', summary: crime.victimID.pretty() },
+		{ name: 'criminalID', summary: crime.criminalID.pretty() },
+		{ name: 'itemBaseID', summary: crime.itemBaseID.pretty() },
+		{ name: 'ownershipID', summary: crime.ownershipID.pretty() },
+		{
+			name: 'witnesses',
+			summary: formatNumber(getVsval(crime.witnessCount)),
+			children: () =>
+				Array.from(crime.witnesses, (witness, i) => ({ name: String(i), summary: witness.pretty() })),
+		},
+		number('bounty', 'u32'),
+		{ name: 'crimeFactionID', summary: crime.crimeFactionID.pretty() },
+		{
+			name: 'isCleared',
+			summary: String(crime.isCleared != 0),
+			edit: propertyEdit(crime, 'isCleared', { type: 'bool' }),
+		},
+	];
+}
+
+/** Entries for a global's values, with edits, for globals whose values can be changed */
+function editableEntries(data: GlobalData, global: unknown): Entry[] | undefined {
+	switch (data.type) {
+		case GlobalDataType.MiscStats: {
+			const { stats } = global as InstanceOf<typeof globals.MiscStats>;
+			const grouped = Map.groupBy(Array.from(stats), stat => stat.category);
+			return [...grouped].map(([category, stats]) => ({
+				name: globals.StatCategory[category] ?? String(category),
+				summary: formatNumber(stats.length),
+				children: () =>
+					stats.map(stat => ({
+						name: stat.name.toString(),
+						summary: String(stat.value),
+						edit: propertyEdit(stat, 'value', { type: 'i32' }),
+					})),
+			}));
+		}
+		case GlobalDataType.ProcessLists: {
+			const { allCrimes } = global as InstanceOf<typeof globals.ProcessLists>;
+			return Array.from(allCrimes, ({ crimes }, type) => ({
+				name: globals.CrimeType[type] ?? String(type),
+				summary: formatNumber(crimes.length),
+				children: () =>
+					Array.from(crimes, crime => ({
+						name: `#${crime.serialNum}`,
+						summary: crime.victimID.pretty(),
+						children: () => crimeEntries(crime),
+					})),
+			}));
+		}
+	}
+}
+
+/** Describes each global in a table, with its values or the lines describing its data as children */
 export function tableEntries(table: ArrayOf<GlobalData>): Entry[] {
 	return Array.from(table, (data): Entry => {
 		const name = GlobalDataType[data.type] ?? `unknown type ${data.type}`;
@@ -234,7 +306,11 @@ export function tableEntries(table: ArrayOf<GlobalData>): Entry[] {
 		return {
 			name,
 			summary: bytes(data.length),
-			children: global ? () => linesToEntries(Array.from(dumpGlobal(data.type, global), String)) : undefined,
+			children: global
+				? () =>
+						editableEntries(data, global)
+						?? linesToEntries(Array.from(dumpGlobal(data.type, global), String))
+				: undefined,
 		};
 	});
 }

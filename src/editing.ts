@@ -305,21 +305,28 @@ export class Locations {
 	}
 }
 
-/** An edit of an object's property, for objects that store their values themselves, such as views of binary data */
+/**
+ * An edit of an object's property, for objects that store their values themselves, such as views of binary data.
+ * @param object The object, or a function returning it for objects that are replaced when they change size
+ * @param options.type How the value is stored, where `bool` is stored as a number
+ */
 export function propertyEdit(
-	object: object,
+	object: object | (() => object),
 	key: string | number,
 	options: EditOptions & { type?: NumberType } = {}
 ): Edit {
 	const { type, ...rest } = options;
+	const target = typeof object == 'function' ? (object as () => object) : () => object;
 	const edit: Edit = {
 		...(type ? limitsOf(type) : {}),
 		...rest,
 		get value() {
-			return Reflect.get(object, key) as EditValue;
+			const value = Reflect.get(target(), key) as EditValue;
+			return type == 'bool' ? Boolean(value) : value;
 		},
 		set(value) {
-			Reflect.set(object, key, checkEditValue(edit, value));
+			value = checkEditValue(edit, value);
+			Reflect.set(target(), key, type == 'bool' ? Number(value) : value);
 		},
 	};
 	return edit;

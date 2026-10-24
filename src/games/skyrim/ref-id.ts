@@ -26,7 +26,7 @@ export class RefID extends struct.packed('RefID', {
 	}
 }
 
-enum RefIDType {
+export enum RefIDType {
 	/** An index into the File.formIDArray. If the index value of 0 is given, the formID is 0x00000000, else, index into the array using value - 1. */
 	Index = 0,
 	/** came from Skyrim.esm */

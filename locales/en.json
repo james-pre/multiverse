@@ -152,6 +152,10 @@
 				"title": "Statistics",
 				"description": "The general stats from the journal, by category"
 			},
+			"crimes": {
+				"title": "Crimes",
+				"description": "Crimes the player was seen committing, with their bounties"
+			},
 			"plugins": {
 				"title": "Plugins",
 				"description": "The plugins the save depends on, in load order"
@@ -177,7 +181,11 @@
 			"compression": "Compression",
 			"data_size": "Uncompressed data",
 			"screenshot": "Screenshot",
-			"change_forms": "Changed records"
+			"change_forms": "Changed records",
+			"bounty": "Bounty",
+			"bounty_value": "{bounty} gold",
+			"cleared": "Cleared",
+			"witnesses": "Witnesses"
 		},
 		"sex": {
 			"Male": "Male",
@@ -191,6 +199,37 @@
 			"Crafting": "Crafting",
 			"Crime": "Crime",
 			"DLC": "DLC"
+		},
+		"empty_name": "The name can not be empty",
+		"crime": {
+			"Theft": "Theft",
+			"Pickpocketing": "Pickpocketing",
+			"Trespassing": "Trespassing",
+			"Assault": "Assault",
+			"Murder": "Murder",
+			"Lycanthropy": "Lycanthropy"
+		},
+		"race": {
+			"ArgonianRace": "Argonian",
+			"BretonRace": "Breton",
+			"DarkElfRace": "Dark Elf",
+			"HighElfRace": "High Elf",
+			"ImperialRace": "Imperial",
+			"KhajiitRace": "Khajiit",
+			"NordRace": "Nord",
+			"OrcRace": "Orc",
+			"RedguardRace": "Redguard",
+			"WoodElfRace": "Wood Elf",
+			"ArgonianRaceVampire": "Argonian (vampire)",
+			"BretonRaceVampire": "Breton (vampire)",
+			"DarkElfRaceVampire": "Dark Elf (vampire)",
+			"HighElfRaceVampire": "High Elf (vampire)",
+			"ImperialRaceVampire": "Imperial (vampire)",
+			"KhajiitRaceVampire": "Khajiit (vampire)",
+			"NordRaceVampire": "Nord (vampire)",
+			"OrcRaceVampire": "Orc (vampire)",
+			"RedguardRaceVampire": "Redguard (vampire)",
+			"WoodElfRaceVampire": "Wood Elf (vampire)"
 		}
 	},
 	"dinao": {

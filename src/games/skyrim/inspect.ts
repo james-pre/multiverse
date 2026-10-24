@@ -2,15 +2,20 @@ import { closeSync, openSync, readdirSync, readSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { decodeUTF8 } from 'utilium';
 import { bytes } from 'utilium/format';
-import { copySave, propertyEdit, type Edit, type NumberType } from '../../editing.js';
+import { checkEditValue, copySave, namedChoices, propertyEdit, type Edit, type NumberType } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
+import { Splice } from '../../splice.js';
 import type { Inspector } from '../index.js';
+import { ChangeFormType } from './change-forms.js';
 import { formatString } from './format.js';
 import type { GlobalData } from './global-data.js';
 import { GlobalDataType, getGlobal, tableEntries } from './global-data.js';
 import { StatCategory } from './globals/misc-stats.js';
+import { CrimeType } from './globals/process-lists.js';
+import { PlayerForm, playerBaseId, races } from './player-form.js';
+import { RefIDType } from './ref-id.js';
 import { SaveFile } from './save-file.js';
 import { fileTimeToInstant, parsePlayTime, raceName } from './strings.js';
 import { CompressionType, PlayerSex, SaveBody } from './structs.js';
@@ -23,6 +28,9 @@ const headerFields: Record<string, NumberType> = {
 	playerLvlUpExp: 'f32',
 };
 
+/** How many offsets the file location table starts with, which are measured from the start of the file */
+const locationTableOffsets = 6;
+
 /** Save file names, which start with the kind of save and its number, like `Save38_` */
 const fileNamePattern = /^([A-Za-z]+)(\d+)_(.*)$/;
 
@@ -32,6 +40,7 @@ const sections = {
 		description: text('skyrim.section.character.description'),
 	},
 	stats: { title: text('skyrim.section.stats.title'), description: text('skyrim.section.stats.description') },
+	crimes: { title: text('skyrim.section.crimes.title'), description: text('skyrim.section.crimes.description') },
 	plugins: { title: text('skyrim.section.plugins.title'), description: text('skyrim.section.plugins.description') },
 	file: { title: text('skyrim.section.file.title'), description: text('skyrim.section.file.description') },
 };
@@ -39,6 +48,8 @@ const sections = {
 class SkyrimInspection implements Inspection {
 	protected readonly file: SaveFile;
 	protected parsed?: SaveBody;
+	/** The player's change form, or null if the save has none this can read */
+	protected playerForm?: PlayerForm | null;
 	/** The decompressed body, which changes to it are made in */
 	protected bodyData?: Uint8Array;
 
@@ -55,14 +66,89 @@ class SkyrimInspection implements Inspection {
 
 	protected headerEdit(field: string): Edit | undefined {
 		const type = headerFields[field];
-		return type && propertyEdit(this.file.header, field, { type, minimum: field == 'playerLevel' ? 1 : undefined });
+		return (
+			type
+			&& propertyEdit(() => this.file.header, field, { type, minimum: field == 'playerLevel' ? 1 : undefined })
+		);
+	}
+
+	/** The player's change form, which has the name, race and sex the game uses */
+	protected player(): PlayerForm | undefined {
+		if (this.playerForm !== undefined) return this.playerForm ?? undefined;
+		const { body } = this;
+		const form = Array.from(body.changeForms).find(
+			form =>
+				form.formType == ChangeFormType.NPC_
+				&& form.formID.type == RefIDType.Default
+				&& form.formID.formID == playerBaseId
+		);
+		try {
+			this.playerForm = form ? new PlayerForm(form, body.byteOffset) : null;
+		} catch {
+			this.playerForm = null;
+		}
+		return this.playerForm ?? undefined;
+	}
+
+	/** The player's name, changing it in the header and the player's change form */
+	protected nameEdit(): Edit | undefined {
+		const player = this.player();
+		if (!player) return;
+		const edit: Edit = {
+			get value() {
+				return player.name ?? '';
+			},
+			set: value => {
+				const name = String(checkEditValue(edit, value)).trim();
+				if (!name) throw new RangeError(text('skyrim.empty_name'));
+				this.file.setHeaderString('playerName', name);
+				player.name = name;
+			},
+		};
+		return player.name === undefined ? undefined : edit;
+	}
+
+	/** The player's race, changing it in the header and the player's change form */
+	protected raceEdit(): Edit | undefined {
+		const player = this.player();
+		if (!player) return;
+		const edit: Edit = {
+			choices: namedChoices(Object.keys(races), raceName),
+			get value() {
+				return Object.keys(races).find(race => races[race] == player.race) ?? '';
+			},
+			set: value => {
+				const race = String(checkEditValue(edit, value));
+				this.file.setHeaderString('playerRaceEditorId', race);
+				player.race = races[race];
+			},
+		};
+		return edit;
+	}
+
+	/** The player's sex, changing it in the header and the player's change form */
+	protected sexEdit(): Edit | undefined {
+		const player = this.player();
+		if (!player) return;
+		const edit: Edit = {
+			choices: namedChoices(['Male', 'Female'], sex => text(`skyrim.sex.${sex}`)),
+			get value() {
+				return PlayerSex[player.gender ?? PlayerSex.Male];
+			},
+			set: value => {
+				const sex = PlayerSex[String(checkEditValue(edit, value)) as keyof typeof PlayerSex];
+				this.file.header.playerSex = sex;
+				player.gender = sex;
+			},
+		};
+		return edit;
 	}
 
 	protected character(): Row[] {
 		const { header } = this.file;
 		const sex = PlayerSex[header.playerSex];
 		return [
-			{ label: text('skyrim.row.name'), value: formatString(header.playerName) },
+			{ label: text('skyrim.row.name'), value: formatString(header.playerName), edit: this.nameEdit() },
 			{
 				label: text('skyrim.row.level'),
 				value: formatValue(header.playerLevel),
@@ -72,8 +158,16 @@ class SkyrimInspection implements Inspection {
 					next: Math.round(header.playerLvlUpExp),
 				}),
 			},
-			{ label: text('skyrim.row.race'), value: raceName(formatString(header.playerRaceEditorId)) },
-			{ label: text('skyrim.row.sex'), value: text(`skyrim.sex.${sex}`, { $default: sex }) },
+			{
+				label: text('skyrim.row.race'),
+				value: raceName(formatString(header.playerRaceEditorId)),
+				edit: this.raceEdit(),
+			},
+			{
+				label: text('skyrim.row.sex'),
+				value: text(`skyrim.sex.${sex}`, { $default: sex }),
+				edit: this.sexEdit(),
+			},
 			{ label: text('skyrim.row.location'), value: formatString(header.playerLocation) },
 			{
 				label: text('skyrim.row.play_time'),
@@ -104,6 +198,42 @@ class SkyrimInspection implements Inspection {
 					edit: propertyEdit(stat, 'value', { type: 'i32' }),
 				})),
 			}));
+	}
+
+	protected crimes(): Row[] {
+		const data = [...this.body.globalDataTable2].find(global => global.type == GlobalDataType.ProcessLists);
+		const lists = data && getGlobal(data as GlobalData & { type: GlobalDataType.ProcessLists });
+		if (!lists) return [];
+		return Array.from(lists.allCrimes, ({ crimes }, type): Row | undefined => {
+			if (!crimes.length) return;
+			const name = CrimeType[type] ?? String(type);
+			return {
+				label: text(`skyrim.crime.${name}`, { $default: name }),
+				value: formatValue(crimes.length),
+				rows: Array.from(crimes, crime => ({
+					label: crime.victimID.formID ? crime.victimID.pretty() : `#${crime.serialNum}`,
+					value: text('skyrim.row.bounty_value', { bounty: crime.bounty }),
+					detail: crime.isCleared ? text('skyrim.row.cleared') : undefined,
+					rows: [
+						{
+							label: text('skyrim.row.bounty'),
+							value: formatValue(crime.bounty),
+							edit: propertyEdit(crime, 'bounty', { type: 'u32' }),
+						},
+						{
+							label: text('skyrim.row.cleared'),
+							value: formatValue(crime.isCleared != 0),
+							edit: propertyEdit(crime, 'isCleared', { type: 'bool' }),
+						},
+						{
+							label: text('skyrim.row.witnesses'),
+							value: formatValue(crime.witnessNum),
+							edit: propertyEdit(crime, 'witnessNum', { type: 'u32' }),
+						},
+					],
+				})),
+			};
+		}).filter(row => row !== undefined);
 	}
 
 	protected plugins(): Row[] {
@@ -151,6 +281,8 @@ class SkyrimInspection implements Inspection {
 				return this.character();
 			case 'stats':
 				return this.stats();
+			case 'crimes':
+				return this.crimes();
 			case 'plugins':
 				return this.plugins();
 			case 'file':
@@ -216,7 +348,25 @@ class SkyrimInspection implements Inspection {
 	}
 
 	public write(path: string): void {
-		this.file.write(path, this.bodyData ?? this.file.body());
+		const data = this.bodyData ?? this.file.body();
+		const fileOffsets: number[] = [];
+		if (this.parsed) {
+			const table = this.parsed.fileLocationTable.byteOffset - this.parsed.byteOffset;
+			for (let i = 0; i < locationTableOffsets; i++) fileOffsets.push(table + i * 4);
+		}
+		if (!this.playerForm?.isChanged) return this.file.write(path, data, fileOffsets);
+
+		const splice = new Splice();
+		splice.replace(this.playerForm.position, this.playerForm.size, this.playerForm.write());
+		const origin = -this.file.bodyStart;
+		this.file.write(
+			path,
+			splice.apply(
+				data,
+				fileOffsets.map(at => ({ at, origin }))
+			),
+			fileOffsets
+		);
 	}
 }
 
