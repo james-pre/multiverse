@@ -121,11 +121,21 @@ suite('diplomacy is not an option', () => {
 		const [resource] = inspection.section('resources');
 		assert.ok(resource.edit?.safe);
 		resource.edit.set(1234);
+		const difficulty = inspection.section('session').find(row => row.label == 'Difficulty')!;
+		assert.ok(difficulty.edit?.safe);
+		difficulty.edit.set(2);
 		const copy = inspector.copy!(path);
 		inspection.write!(copy);
 		assert.equal(copy, join(directory, 'Lord', 'Grrr copy'));
 		assert.ok(existsSync(`${copy}.dat`));
 		assert.equal(inspector.open(copy).section('resources')[0].value, '1,234');
+		assert.equal(
+			inspector
+				.open(copy)
+				.section('session')
+				.find(row => row.label == 'Difficulty')?.value,
+			'2'
+		);
 		assert.equal(inspector.open(path).section('resources')[0].value, resource.value);
 		rmSync(copy);
 		rmSync(`${copy}.dat`);

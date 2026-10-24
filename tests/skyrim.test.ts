@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
+import { parseEditValue } from '../src/editing.js';
 import { skyrim } from '../src/games/skyrim/index.js';
 import { parsePlayTime } from '../src/games/skyrim/strings.js';
 import { inspector } from '../src/games/skyrim/inspect.js';
@@ -90,20 +91,45 @@ function writeSave({ number, playTime, time, level, quests }: SaveOptions): void
 		.i32(quests)
 		.wstring('Whiterun Bounty')
 		.u8(5)
-		.i32(40);
+		.i32(40)
+		.toBytes();
+	// The player's change form, with a name and a race, Breton changed from Nord.
+	const playerData = new Writer()
+		.wstring('Wozim')
+		.bytes(new Uint8Array([0x41, 0x37, 0x41, 0x41, 0x37, 0x46]))
+		.toBytes();
+	const player = new Writer()
+		.bytes(new Uint8Array([0x40, 0, 7]))
+		.u32((1 << 5) | (1 << 25))
+		.u8(9)
+		.u8(78)
+		.u8(playerData.length)
+		.u8(0)
+		.bytes(playerData)
+		.toBytes();
+	const bodyStart = 13 + 4 + header.length + 8;
+	const table = 5 + plugins.length;
+	const globals = table + 100;
+	const forms = globals + 8 + stats.length;
 	const body = new Writer()
 		.u8(78)
 		.u32(plugins.length)
 		.bytes(plugins)
-		.bytes(new Uint8Array(6 * 4))
+		.u32(0)
+		.u32(0)
+		.u32(bodyStart + globals)
+		.u32(bodyStart + forms)
+		.u32(bodyStart + forms)
+		.u32(bodyStart + forms + player.length)
 		.u32(1)
 		.u32(0)
 		.u32(0)
-		.u32(0)
+		.u32(1)
 		.bytes(new Uint8Array(15 * 4))
 		.u32(0)
 		.u32(stats.length)
-		.bytes(stats.toBytes())
+		.bytes(stats)
+		.bytes(player)
 		.toBytes();
 	const compressed = literalBlock(body);
 
@@ -173,6 +199,33 @@ suite('skyrim', () => {
 		assert.equal(save.counters?.level, 50);
 		assert.equal(save.counters?.['Quests Completed'], 99);
 		assert.equal(skyrim.scan(directory).find(save => save.path == path)?.counters?.level, 10);
+		rmSync(copy);
+	});
+
+	test('edits the name, race and sex in the header and the player change form', () => {
+		const path = skyrim.scan(directory).find(save => save.name == 'Save 1')!.path;
+		const inspection = inspector.open(path);
+		const row = (label: string) => inspection.section('character').find(row => row.label == label)!;
+		assert.equal(row('Race').edit?.value, 'BretonRace');
+		assert.equal(row('Sex').edit?.value, 'Male');
+		row('Name').edit!.set('Wozimington');
+		row('Race').edit!.set(parseEditValue(row('Race').edit!, 'nord'));
+		row('Sex').edit!.set('Female');
+		assert.throws(() => row('Name').edit!.set(' '), /empty/);
+
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		const edited = inspector.open(copy);
+		const values = ['Name', 'Race', 'Sex'].map(
+			label => edited.section('character').find(row => row.label == label)?.value
+		);
+		assert.deepEqual(values, ['Wozimington', 'Nord', 'Female']);
+		const editedRow = (label: string) => edited.section('character').find(row => row.label == label)!;
+		assert.equal(editedRow('Race').edit?.value, 'NordRace');
+		assert.equal(editedRow('Sex').edit?.value, 'Female');
+		assert.equal(editedRow('Name').edit?.value, 'Wozimington');
+		const stats = edited.section('stats').flatMap(row => row.rows ?? []);
+		assert.equal(stats.find(row => row.label == 'Whiterun Bounty')?.value, '40');
 		rmSync(copy);
 	});
 });

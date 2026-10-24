@@ -226,4 +226,29 @@ suite('cyberpunk save file', () => {
 		);
 		assert.equal(new SaveFile(path).facts().get(factHash('q001_done')), 1);
 	});
+
+	test('adds fields that objects leave out because they have their default value', () => {
+		const file = new SaveFile(path);
+		const node = file.find('ScriptableSystemsContainer')!;
+		const container = file.package(node);
+		const [root, child] = container.objects;
+		assert.equal(container.fieldEdit(child, 'name', 'String'), undefined);
+		const count = container.fieldEdit(child, 'count', 'Int32', { minimum: 0 })!;
+		assert.equal(count.value, 0);
+		count.set(9);
+		container.fieldEdit(root, 'level', 'Int32')!.set(6);
+
+		const copy = join(directory, 'added.dat');
+		file.write(copy);
+		const edited = new SaveFile(copy);
+		const [editedRoot, editedChild] = edited.package(edited.find('ScriptableSystemsContainer')!).objects;
+		assert.equal(editedChild.count, 9);
+		assert.equal(editedChild.name, 'x');
+		assert.equal(editedRoot.level, 6);
+		assert.deepEqual(editedRoot.tags, ['level', 'mode']);
+		assert.equal(editedRoot.child, editedChild);
+		const growth = 8 + 4 + 4 + 'count\0'.length;
+		assert.equal(edited.find('ScriptableSystemsContainer')!.size, node.size + growth);
+		assert.equal(edited.facts().get(factHash('q101_done')), 3);
+	});
 });

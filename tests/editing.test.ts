@@ -5,14 +5,17 @@ import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import {
 	binaryEdit,
+	choiceLabel,
 	copySave,
 	linkedEdit,
 	Locations,
+	namedChoices,
 	parseEditValue,
 	propertyEdit,
 	type Edit,
 } from '../src/editing.js';
 import { JsonDocument } from '../src/json.js';
+import { Splice, type Offset } from '../src/splice.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
@@ -74,6 +77,41 @@ suite('editing', () => {
 		assert.throws(() => edit.set(256));
 	});
 
+	test('edits with choices only take those values, by value or label', () => {
+		let difficulty = 'Easy';
+		const edit = propertyEdit(
+			{
+				get difficulty() {
+					return difficulty;
+				},
+				set difficulty(value) {
+					difficulty = value;
+				},
+			},
+			'difficulty',
+			{
+				choices: namedChoices(['Easy', 'VeryHard'], value => value.replace('VeryHard', 'Very Hard')),
+			}
+		);
+		assert.equal(parseEditValue(edit, 'very hard'), 'VeryHard');
+		assert.equal(parseEditValue(edit, 'Easy'), 'Easy');
+		assert.throws(() => parseEditValue(edit, 'Hard'), /not one of Easy, Very Hard/);
+		assert.throws(() => edit.set('Hard'));
+		edit.set('VeryHard');
+		assert.equal(difficulty, 'VeryHard');
+		assert.equal(choiceLabel(edit), 'Very Hard');
+	});
+
+	test('propertyEdit stores booleans as numbers and can follow an object that is replaced', () => {
+		let crime = { isCleared: 0 };
+		const edit = propertyEdit(() => crime, 'isCleared', { type: 'bool' });
+		assert.equal(edit.value, false);
+		crime = { isCleared: 1 };
+		assert.equal(edit.value, true);
+		edit.set(false);
+		assert.equal(crime.isCleared, 0);
+	});
+
 	test('copySave copies a save and renames its companions', () => {
 		const folder = join(directory, 'copy');
 		mkdirSync(folder);
@@ -89,6 +127,52 @@ suite('editing', () => {
 			join(folder, 'Mission. start.dat'),
 		]);
 		assert.ok(existsSync(join(folder, 'Mission. start copy.dat')));
+	});
+});
+
+suite('Splice', () => {
+	/** Data with a header of offsets from its start to two words, and a 24-bit offset packed with a length */
+	function data(): Uint8Array {
+		const bytes = new Uint8Array(32);
+		const view = new DataView(bytes.buffer);
+		view.setUint32(0, 16, true);
+		view.setUint32(4, 24, true);
+		view.setUint32(8, (5 << 24) | 24, true);
+		bytes.set([1, 2, 3, 4], 16);
+		bytes.set([5, 6, 7, 8], 24);
+		return bytes;
+	}
+	const offsets: Offset[] = [
+		{ at: 0, origin: 0 },
+		{ at: 4, origin: 0 },
+		{ at: 8, origin: 0, bits: 24 },
+	];
+
+	test('moves offsets that point at or past inserted bytes', () => {
+		const splice = new Splice();
+		splice.insert(20, new Uint8Array([9, 9]));
+		const insertion = splice.insert(24, new Uint8Array([10]));
+		const result = splice.apply(data(), offsets);
+		const view = new DataView(result.buffer);
+		assert.equal(result.length, 35);
+		assert.equal(view.getUint32(0, true), 16);
+		assert.equal(view.getUint32(4, true), 27);
+		assert.equal(view.getUint32(8, true), (5 << 24) | 27);
+		assert.deepEqual([...result.subarray(27, 31)], [5, 6, 7, 8]);
+		assert.equal(splice.start(insertion), 26);
+		assert.equal(result[26], 10);
+	});
+
+	test('replaces bytes, keeping offsets to the start of what they replace', () => {
+		const splice = new Splice();
+		splice.replace(16, 4, new Uint8Array([1, 2]));
+		assert.throws(() => splice.replace(18, 4, new Uint8Array()), /already being replaced/);
+		const result = splice.apply(data(), offsets);
+		const view = new DataView(result.buffer);
+		assert.equal(view.getUint32(0, true), 16);
+		assert.equal(view.getUint32(4, true), 22);
+		assert.deepEqual([...result.subarray(16, 18)], [1, 2]);
+		assert.deepEqual([...result.subarray(22, 26)], [5, 6, 7, 8]);
 	});
 });
 

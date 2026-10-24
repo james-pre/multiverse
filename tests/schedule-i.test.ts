@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
+import { Archive } from '../src/archive.js';
 import { scheduleI } from '../src/games/schedule-i/index.js';
 import { inspector } from '../src/games/schedule-i/inspect.js';
 import { rankName } from '../src/games/schedule-i/names.js';
@@ -59,7 +60,7 @@ suite('Schedule I', () => {
 		assert.equal(rankName(99, 1), 'Rank 99 I');
 	});
 
-	test('edits the bank balance and cash, writing them to a copy in a free slot', () => {
+	test('edits the bank balance and cash, writing them in the slot once the original is archived', () => {
 		const path = join(directory, 'SaveGame_1');
 		mkdirSync(join(path, 'Players/Player_0'), { recursive: true });
 		const cash = JSON.stringify({ DataType: 'CashData', ID: 'cash', CashBalance: 25.5 });
@@ -78,23 +79,22 @@ suite('Schedule I', () => {
 		pocket.edit.set(75);
 		assert.throws(() => pocket.edit!.set(-1), /lowest/);
 
-		const copy = inspector.copy!(path);
-		inspection.write!(copy);
-		assert.equal(copy, join(directory, 'SaveGame_3'));
-		const copied = inspector.open(copy).section('money');
-		assert.equal(copied.find(row => row.label == 'Bank balance')?.value, '$1,000');
-		assert.equal(copied.find(row => row.label == 'Cash')?.value, '$75');
-		assert.equal(
-			inspector
-				.open(path)
-				.section('money')
-				.find(row => row.label == 'Cash')?.value,
-			'$26'
-		);
-	});
+		assert.equal(inspector.copy, undefined);
+		const archive = new Archive({ game: scheduleI, directory }, join(directory, 'archive'));
+		assert.ok(archive.hasSlots);
+		const original = archive.find(path)!;
+		archive.add(original);
+		inspection.write!(path);
 
-	test('copies need a free slot', () => {
-		for (const slot of [4, 5]) writeSlot(slot, 100, 0);
-		assert.throws(() => inspector.copy!(join(directory, 'SaveGame_1')), /Every save slot/);
+		const edited = inspector.open(path).section('money');
+		assert.equal(edited.find(row => row.label == 'Bank balance')?.value, '$1,000');
+		assert.equal(edited.find(row => row.label == 'Cash')?.value, '$75');
+		const archived = inspector.open(join(original.archived!, 'SaveGame_1')).section('money');
+		assert.equal(archived.find(row => row.label == 'Cash')?.value, '$26');
+
+		const saves = archive.scan().filter(save => save.slot == 'SaveGame_1');
+		assert.equal(saves.length, 2, 'the edited save is told apart from the archived original');
+		const [timeline] = Timeline.fromSaves(saves);
+		assert.equal(timeline.nodes.length, 2);
 	});
 });

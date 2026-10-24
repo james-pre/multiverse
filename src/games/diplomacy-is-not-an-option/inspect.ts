@@ -32,24 +32,36 @@ class DinoInspection implements Inspection {
 	protected readonly path: string;
 	protected readonly container: SaveContainer;
 	protected readonly document: nrbf.Document;
-	/** The header the game lists the save with, which has some of the save's values */
-	protected readonly header?: nrbf.Document;
+	protected headerDocument?: nrbf.Document | Error;
 
 	public constructor(path: string) {
 		this.path = savePath(path);
 		({ container: this.container, document: this.document } = openContainer(this.path));
-		const headerPath = `${this.path}.dat`;
-		if (existsSync(headerPath)) this.header = nrbf.read(readFileSync(headerPath));
+	}
+
+	/** The header the game lists the save with, which has some of the save's values, or the error reading it */
+	protected get header(): nrbf.Document | Error | undefined {
+		const path = `${this.path}.dat`;
+		if (this.headerDocument || !existsSync(path)) return this.headerDocument;
+		try {
+			this.headerDocument = nrbf.read(readFileSync(path));
+		} catch (error) {
+			this.headerDocument = error instanceof Error ? error : new Error(String(error));
+		}
+		return this.headerDocument;
 	}
 
 	/** The difficulty's index in the mission's difficulties, changing it in the header too */
 	protected difficultyEdit(): Edit | undefined {
 		// The game falls back to a valid difficulty when the index is out of range.
 		const main = this.document.locations.edit(this.container, 'difficultyIndex', { safe: true, minimum: 0 });
-		const root = this.header?.root;
+		const header = this.header instanceof Error ? undefined : this.header;
+		const root = header?.root;
 		return (
 			main
-			&& linkedEdit(main, [nrbf.isInstance(root) ? this.header!.locations.edit(root, 'difficultyId') : undefined])
+			&& linkedEdit(main, [
+				header && nrbf.isInstance(root) ? header.locations.edit(root, 'difficultyId') : undefined,
+			])
 		);
 	}
 
@@ -142,19 +154,23 @@ class DinoInspection implements Inspection {
 
 	public contents(): Entry {
 		const { header } = this;
+		const headerEntry = (): Entry[] => {
+			if (!header) return [];
+			if (header instanceof Error) return [{ name: 'header', summary: header.message }];
+			return [nrbf.entry('header', header.root, header.locations)];
+		};
 		return {
 			name: basename(this.path),
 			summary: '',
-			children: () => [
-				...(header ? [nrbf.entry('header', header.root, header.locations)] : []),
-				nrbf.entry('save', this.container, this.document.locations),
-			],
+			children: () => [...headerEntry(), nrbf.entry('save', this.container, this.document.locations)],
 		};
 	}
 
 	public write(path: string): void {
 		writeFileSync(savePath(path), this.document.data);
-		if (this.header) writeFileSync(`${savePath(path)}.dat`, this.header.data);
+		const { headerDocument } = this;
+		if (headerDocument && !(headerDocument instanceof Error))
+			writeFileSync(`${savePath(path)}.dat`, headerDocument.data);
 	}
 }
 
