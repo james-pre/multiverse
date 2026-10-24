@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { diplomacyIsNotAnOption } from '../src/games/diplomacy-is-not-an-option.js';
+import { diplomacyIsNotAnOption } from '../src/games/diplomacy-is-not-an-option/index.js';
+import { inspector } from '../src/games/diplomacy-is-not-an-option/inspect.js';
 import * as nrbf from '../src/nrbf.js';
 import { Timeline } from '../src/timeline.js';
 import { serialize, Single } from './nrbf.test.js';
@@ -24,7 +25,7 @@ interface SaveOptions {
 function writeSave({ name, time, playTime, kills, research, mission = 7 }: SaveOptions): void {
 	const path = join(directory, 'Lord', name);
 	const container = {
-		[nrbf.className]: 'Utility.SaveContainerS',
+		[nrbf.className]: 'Utility.SaveContainer',
 		saveVersion: 16,
 		mapSeed: 99,
 		missionIndex: mission,
@@ -88,5 +89,16 @@ suite('diplomacy is not an option', () => {
 			Grrr: 'AutoSave_1',
 			AutoSave_2: 'Wake-up call, mission start',
 		});
+	});
+
+	test('inspect recognizes saves by either file and shows the session', () => {
+		const path = join(directory, 'Lord', 'Grrr');
+		assert.ok(inspector.recognizes(path));
+		assert.ok(inspector.recognizes(`${path}.dat`));
+		const lines = [...inspector.inspect(`${path}.dat`, new Set(['session', 'research', 'entities']))];
+		assert.ok(lines.includes('\tplay time: 20:00'));
+		assert.ok(lines.includes('\tenemies killed: 50'));
+		assert.ok(lines.includes('\tbuildings (3): 1, 2, 3'));
+		assert.ok(lines.includes('\tcitizens: 3'));
 	});
 });

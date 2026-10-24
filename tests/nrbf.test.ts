@@ -154,4 +154,41 @@ suite('nrbf', () => {
 	test('rejects other data', () => {
 		assert.throws(() => nrbf.parse(encodeUTF8('{}')));
 	});
+
+	test('shortTypeName drops namespaces and assembly details', () => {
+		const name =
+			'System.Collections.Generic.Dictionary`2[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089],[UI.Data+Entry, DNO.Main, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null]]';
+		assert.equal(nrbf.shortTypeName(name), 'Dictionary<Int32, Data+Entry>');
+	});
+
+	test('dump shows lists, enums and shortened arrays', () => {
+		const list = {
+			[nrbf.className]:
+				'System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
+			_items: new Int32Array([4, 5, 0, 0]),
+			_size: 2,
+			_version: 2,
+		};
+		const root = {
+			[nrbf.className]: 'Test.Root',
+			mode: { [nrbf.className]: 'Test.Mode', value__: 1 },
+			ids: list,
+			points: [point(1, 2), point(3, 4), point(5, 6)],
+		};
+		assert.deepEqual(
+			[...nrbf.dump('Root', nrbf.parse(serialize(root)), { items: 1 })],
+			[
+				'Root: Root',
+				'\tmode: Mode(1)',
+				'\tids: List<Int32>(2)',
+				'\t\t0: 4',
+				'\t\t… 1 more',
+				'\tpoints: Point[3]',
+				'\t\t0: Point',
+				'\t\t\tx: 1',
+				'\t\t\ty: 2',
+				'\t\t… 2 more',
+			]
+		);
+	});
 });

@@ -1,9 +1,4 @@
-import * as io from 'ioium';
-import { closeSync, openSync, readdirSync, readSync, statSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
-import { text } from '../i18n.js';
-import type { Save } from '../save.js';
-import type { Game } from './index.js';
+import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs';
 
 /** Header dates like `10/11/2026 21:58:04`, in UTC */
 const datePattern = /^(\d+)\/(\d+)\/(\d+) (\d+):(\d+):(\d+)$/;
@@ -58,11 +53,51 @@ function numberAfter(json: string, key: string): number | undefined {
 	return match ? Number(match[1]) : undefined;
 }
 
-interface SaveFile {
+export interface Header {
 	version: string;
 	/** Missing in saves from before the campaign was added */
 	map?: string;
 	time: Temporal.Instant;
+	/** Where the JSON body starts in the text */
+	bodyStart: number;
+}
+
+/** Parses the lines before the JSON body, like `InfraSpace`, the game version, the map and the date. */
+export function parseHeader(text: string): Header {
+	const lines = text.split(/\r?\n/, 5);
+	if (lines[0] != 'InfraSpace') throw new Error('Not an InfraSpace save');
+	const dateIndex = lines.findIndex(line => datePattern.test(line));
+	if (dateIndex == -1) throw new Error('The save has no date');
+	return {
+		version: lines[1],
+		map: dateIndex > 2 ? lines[2] : undefined,
+		time: parseDate(lines[dateIndex]),
+		bodyStart: text.indexOf('\n{') + 1,
+	};
+}
+
+/** Reads text from a file, without the byte order mark the game writes */
+function decode(buffer: Buffer): string {
+	return buffer.toString('utf8').replace(/^\ufeff/, '');
+}
+
+export function isSave(path: string): boolean {
+	const fd = openSync(path, 'r');
+	try {
+		return decode(read(fd, 0, 64)).startsWith('InfraSpace\r\n');
+	} finally {
+		closeSync(fd);
+	}
+}
+
+/** Reads the whole save, which is slow for large cities. */
+export function readWhole(path: string): { header: Header; body: Record<string, unknown> } {
+	const text = decode(readFileSync(path));
+	const header = parseHeader(text);
+	return { header, body: JSON.parse(text.slice(header.bodyStart)) as Record<string, unknown> };
+}
+
+export interface SaveFile extends Header {
 	mapSeed: number;
 	/** In seconds */
 	playTime: number;
@@ -77,7 +112,7 @@ interface SaveFile {
 	storyMessages: string[];
 }
 
-interface Managers {
+export interface Managers {
 	goalManager?: { currentGoalIndex?: number };
 	researchManager?: { researchProgress?: Record<string, number>; currentResearch?: string | null };
 	populationManager?: { cityLevel?: number };
@@ -88,14 +123,8 @@ interface Managers {
 export function readSaveFile(path: string): SaveFile {
 	const fd = openSync(path, 'r');
 	try {
-		const head = read(fd, 0, 1 << 16)
-			.toString('utf8')
-			// eslint-disable-next-line no-irregular-whitespace
-			.replace(/^﻿/, '');
-		const lines = head.split(/\r?\n/, 5);
-		if (lines[0] != 'InfraSpace') throw new Error('Not an InfraSpace save');
-		const dateIndex = lines.findIndex(line => datePattern.test(line));
-		if (dateIndex == -1) throw new Error('The save has no date');
+		const head = decode(read(fd, 0, 1 << 16));
+		const header = parseHeader(head);
 
 		const managersStart = find(fd, '"goalManager":') ?? find(fd, '"researchManager":');
 		const managers = managersStart === undefined ? '' : read(fd, managersStart, 1 << 16).toString('utf8');
@@ -108,9 +137,7 @@ export function readSaveFile(path: string): SaveFile {
 		const progress = research?.researchProgress ?? {};
 
 		return {
-			version: lines[1],
-			map: dateIndex > 2 ? lines[2] : undefined,
-			time: parseDate(lines[dateIndex]),
+			...header,
 			mapSeed: numberAfter(head, 'mapSeed') ?? 0,
 			playTime: numberAfter(head, 'totalPlayTime') ?? 0,
 			nextId: numberAfter(head, 'nextID') ?? 0,
@@ -125,76 +152,3 @@ export function readSaveFile(path: string): SaveFile {
 		closeSync(fd);
 	}
 }
-
-const fileOf = new WeakMap<Save, SaveFile>();
-
-function readSave(path: string): Save {
-	const file = readSaveFile(path);
-	const name = basename(path, '.sav');
-	const isAutosave = /^Autosave \d+$/.test(name);
-	const completed = file.researched.length;
-	const time = file.time.toZonedDateTimeISO(Temporal.Now.timeZoneId());
-
-	const counters: Record<string, number> = { nextId: file.nextId, simulationFrame: file.simulationFrame };
-	if (file.goal !== undefined) counters.goal = file.goal;
-	// Research that a later game version removed is ignored.
-	for (const [research, progress] of Object.entries(file.research))
-		counters[`research.${research}`] = +(progress > 0);
-
-	const save: Save = {
-		id: `${basename(dirname(path))}/${name}@${file.time.toString()}`,
-		name,
-		path,
-		game: infraspace.id,
-		playthrough: String(file.mapSeed),
-		playTime: file.playTime,
-		time,
-		kind: isAutosave ? 'auto' : 'manual',
-		label: file.version,
-		highlights: [
-			...(file.cityLevel === undefined ? [] : [text('infraspace.city_level', { level: file.cityLevel })]),
-			text('infraspace.research', { count: completed }),
-		],
-		progress: new Set(file.storyMessages),
-		counters,
-		details: {
-			[text('infraspace.detail.version')]: file.version,
-			[text('infraspace.detail.map')]: file.map ?? '',
-			[text('infraspace.detail.research')]: completed,
-		},
-	};
-	fileOf.set(save, file);
-	return save;
-}
-
-function* saveFiles(directory: string): Generator<string> {
-	for (const entry of readdirSync(directory, { withFileTypes: true })) {
-		const path = join(directory, entry.name);
-		if (entry.isDirectory()) yield* saveFiles(path);
-		else if (entry.name.endsWith('.sav')) yield path;
-	}
-}
-
-export const infraspace: Game = {
-	id: 'infraspace',
-	name: 'InfraSpace',
-	steam: { id: 1511460, saves: 'AppData/LocalLow/Dionic Software/InfraSpace/saves' },
-	describe(timeline) {
-		const named = timeline.nodes.filter(node => node.save.kind == 'manual');
-		const latest = (named.at(-1) ?? timeline.nodes.at(-1)!).save;
-		const level = Math.max(0, ...timeline.nodes.map(node => fileOf.get(node.save)!.cityLevel ?? 0));
-		return text('infraspace.playthrough', { name: latest.name, level });
-	},
-	actions: [],
-	scan(directory) {
-		const saves: Save[] = [];
-		for (const path of saveFiles(directory)) {
-			try {
-				saves.push(readSave(path));
-			} catch (error) {
-				io.warn(`Skipping ${path}: ${io.errorText(error)}`);
-			}
-		}
-		return saves;
-	},
-};

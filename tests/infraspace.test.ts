@@ -3,7 +3,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { infraspace, objectAfter, parseDate } from '../src/games/infraspace.js';
+import { infraspace } from '../src/games/infraspace/index.js';
+import { inspector } from '../src/games/infraspace/inspect.js';
+import { objectAfter, parseDate } from '../src/games/infraspace/save-file.js';
 import { Timeline } from '../src/timeline.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
@@ -100,5 +102,15 @@ suite('infraspace', () => {
 			]
 		);
 		assert.equal(timeline.nodes.find(node => node.save.name == 'Autosave 1')?.save.kind, 'auto');
+	});
+
+	test('inspect shows the header, city, research and contents', () => {
+		const path = join(directory, 'InfraSpace 1.56.460', 'Kurai v2.sav');
+		assert.ok(inspector.recognizes(path));
+		const lines = [...inspector.inspect(path, new Set(Object.keys(inspector.sections)))];
+		assert.ok(lines.includes('\tmap: BiomesWorld'));
+		assert.ok(lines.includes('\tcityLevel: 3'));
+		assert.ok(lines.includes('\ttrains: 200'));
+		assert.ok(lines.includes('\tbuildings: 100'));
 	});
 });

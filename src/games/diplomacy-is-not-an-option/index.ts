@@ -1,30 +1,11 @@
 import * as io from 'ioium';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import { text } from '../i18n.js';
-import * as nrbf from '../nrbf.js';
-import type { Save } from '../save.js';
-import type { Game } from './index.js';
-
-interface SessionTime {
-	/** Scaled by the game speed, in seconds */
-	elapsedTime: number;
-	/** In seconds. Missing in early saves. */
-	elapsedTimeUnscaled?: number;
-}
-
-/** The members of `Utility.SaveContainerS` that the timeline uses */
-interface SaveContainer extends nrbf.Instance {
-	saveVersion: number;
-	mapSeed: number;
-	missionIndex: number;
-	difficultyIndex: number;
-	sessionTime: SessionTime;
-	research: { completeBuildings: Int32Array; completeResearches: Int32Array };
-	buildings: unknown[];
-	citizens: unknown[];
-	deathCounter: { value: number };
-}
+import { text } from '../../i18n.js';
+import type { Save } from '../../save.js';
+import type { Game } from '../index.js';
+import { readContainer, type SaveContainer } from './container.js';
+import { inspector } from './inspect.js';
 
 /** Saves the game names after the mission and the moment, like `Wake-up call, mission start` */
 const checkpointPattern = /^(?<mission>.+), (?:mission start|faction choice)$/;
@@ -32,8 +13,7 @@ const checkpointPattern = /^(?<mission>.+), (?:mission start|faction choice)$/;
 const containerOf = new WeakMap<Save, SaveContainer>();
 
 function readSave(path: string, profile: string): Save {
-	const container = nrbf.parse(readFileSync(path)) as SaveContainer;
-	if (!('sessionTime' in container)) throw new Error('Not a save');
+	const container = readContainer(path);
 	const name = basename(path);
 	const { mtime } = statSync(path);
 	const time = Temporal.Instant.fromEpochMilliseconds(mtime.getTime()).toZonedDateTimeISO(Temporal.Now.timeZoneId());
@@ -99,6 +79,7 @@ export const diplomacyIsNotAnOption: Game = {
 		});
 	},
 	actions: [],
+	inspector,
 	scan(directory) {
 		const saves: Save[] = [];
 		for (const [path, profile] of saveFiles(directory)) {

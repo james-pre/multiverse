@@ -3,8 +3,8 @@ import type { Save } from '../save.js';
 import * as steam from '../steam.js';
 import type { Timeline } from '../timeline.js';
 import { cyberpunk } from './cyberpunk.js';
-import { diplomacyIsNotAnOption } from './diplomacy-is-not-an-option.js';
-import { infraspace } from './infraspace.js';
+import { diplomacyIsNotAnOption } from './diplomacy-is-not-an-option/index.js';
+import { infraspace } from './infraspace/index.js';
 import { skyrim } from './skyrim/index.js';
 
 /** Something a game lets you do with a save, beyond deleting it. */

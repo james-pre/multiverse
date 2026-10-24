@@ -365,3 +365,77 @@ export function parse(data: Uint8Array): unknown {
 	reader.resolve();
 	return reader.objects.get(header.id);
 }
+
+const assemblyPattern = /,\s*[\w.]+,\s*Version=[^,\]]+,\s*Culture=[^,\]]+,\s*PublicKeyToken=\w+/g;
+
+/** Shortens a .NET type name, e.g. ``System.Collections.Generic.List`1[[System.Int32, mscorlib, …]]`` to `List<Int32>`. */
+export function shortTypeName(name: string): string {
+	return name
+		.replace(assemblyPattern, '')
+		.replace(/`\d+\[\[/g, '<')
+		.replace(/\]\]/g, '>')
+		.replace(/\],\[/g, ', ')
+		.replace(/(?:\w+\.)+(\w+)/g, '$1');
+}
+
+/** The elements of a `System.Collections.Generic.List`, or undefined for other values */
+export function listItems(value: unknown): unknown[] | ArrayLike<unknown> | undefined {
+	if (!isInstance(value) || !value[className].startsWith('System.Collections.Generic.List`1')) return;
+	const items = value._items as unknown[] | Int32Array | null;
+	return items?.slice(0, value._size as number) ?? [];
+}
+
+/** Whether a value is a boxed .NET enum, which only has a `value__` member */
+export function isEnum(value: unknown): value is Instance & { value__: number } {
+	if (!isInstance(value)) return false;
+	const members = Object.keys(value);
+	return members.length == 1 && members[0] == 'value__';
+}
+
+function summarize(value: unknown): string {
+	if (value === null || value === undefined) return 'null';
+	if (typeof value == 'string') return JSON.stringify(value);
+	if (typeof value == 'number' || typeof value == 'bigint' || typeof value == 'boolean') return String(value);
+	if (typeof value != 'object') return '?';
+	if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+		const items = value as unknown as ArrayLike<number | bigint>;
+		const preview = Array.from({ length: Math.min(items.length, 8) }, (_, i) => items[i]).join(', ');
+		return `${value.constructor.name}(${items.length}) [${preview}${items.length > 8 ? ', …' : ''}]`;
+	}
+	const list = listItems(value);
+	if (list) return `${shortTypeName((value as Instance)[className])}(${list.length})`;
+	if (Array.isArray(value)) {
+		const first = value.find(isInstance);
+		return `${first ? shortTypeName(first[className]) : ''}[${value.length}]`;
+	}
+	if (!isInstance(value)) return '?';
+	if (isEnum(value)) return `${shortTypeName(value[className])}(${String(value.value__)})`;
+	return shortTypeName(value[className]);
+}
+
+export interface DumpOptions {
+	/** How many levels of objects to show below the value */
+	depth?: number;
+	/** How many elements of each array to show */
+	items?: number;
+}
+
+/** Describes a deserialized value and its members as indented lines, shortening long arrays. */
+export function* dump(name: string, value: unknown, options: DumpOptions = {}, indent = ''): Generator<string> {
+	const { depth = 3, items = 3 } = options;
+	yield `${indent}${name}: ${summarize(value)}`;
+	if (depth <= 0 || typeof value != 'object' || value === null || ArrayBuffer.isView(value)) return;
+
+	const children = { depth: depth - 1, items };
+	const elements = listItems(value) ?? (Array.isArray(value) ? value : undefined);
+	if (elements) {
+		const shown = Math.min(elements.length, items);
+		for (let i = 0; i < shown; i++) yield* dump(String(i), elements[i], children, indent + '\t');
+		if (elements.length > shown) yield `${indent}\t… ${elements.length - shown} more`;
+		return;
+	}
+
+	if (!isInstance(value) || isEnum(value)) return;
+	for (const [member, memberValue] of Object.entries(value))
+		yield* dump(member, memberValue, children, indent + '\t');
+}
