@@ -14,8 +14,7 @@ export class MainWindow extends Adw.ApplicationWindow {
 	protected readonly timelines = new Map<Adw.NavigationPage, TimelinePage>();
 
 	public constructor(application: Adw.Application) {
-		super();
-		this.setApplication(application);
+		super({ application });
 		this.setTitle(text('app.title'));
 		this.setDefaultSize(1280, 720);
 
