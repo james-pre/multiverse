@@ -39,7 +39,8 @@
 		"test": "tsx --test tests/*.test.ts",
 		"build:native": "girbind build",
 		"postinstall": "[ ! -e dist/main.js ] || node dist/main.js install --global-only",
-		"prepublishOnly": "npm run build"
+		"prepublishOnly": "npm run build",
+		"build:sea": "node scripts/sea.js"
 	},
 	"prettier": {
 		"singleQuote": true,
@@ -77,6 +78,7 @@
 		"prettier": "^3.9.10",
 		"tsx": "^4.23.15",
 		"typescript": "^6.0.3",
-		"typescript-eslint": "^8.72.0"
+		"typescript-eslint": "^8.72.0",
+		"xsea": "^1.0.1"
 	}
 }

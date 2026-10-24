@@ -78,7 +78,7 @@ cli.command('install')
 	.option('--global-only', 'Only install during a global npm install, and warn instead of failing')
 	.action(options => {
 		if (!options.globalOnly) {
-			for (const path of installEntry(options.dataDirectory)) io.log('Linked', path);
+			for (const path of installEntry(options.dataDirectory)) io.log('Installed', path);
 			return;
 		}
 

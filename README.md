@@ -8,11 +8,15 @@ Supported games:
 
 ## Installation
 
+Save Timeline needs GTK 4 and libadwaita. Either download `save-timeline-linux-x64` from the [latest release](https://github.com/james-pre/save-timeline/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
+
 ```sh
-sudo npm i -g @james-pre/save-timeline
+sudo npm i -g @james-pre/save-timeline --allow-scripts=@james-pre/save-timeline
 ```
 
-This needs Node.js 26 or newer, GTK 4 and libadwaita. A global install adds a desktop entry and icon, so Save Timeline shows up in your launcher. `save-timeline install` and `save-timeline uninstall` manage them yourself, for example with `--data-directory ~/.local/share`.
+npm only runs the install script, which adds a desktop entry and icon so Save Timeline shows up in your launcher, if `--allow-scripts` covers the package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
+
+`save-timeline install` and `save-timeline uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
 
 ## Usage
 
@@ -42,4 +46,8 @@ node dist/main.js
 
 The viewer uses GTK 4 and libadwaita on Node through [girbind](https://github.com/james-pre/girbind). GLib events run from Node's event loop, so the app calls `register()` and `activate()` instead of the blocking `run()`, and holds a `keepAlive()` handle until the window closes.
 
-Releases are published to npm by CI, with the bindings prebuilt on Fedora.
+UI text is in `locales/`, using [`@james-pre/locales`](https://www.npmjs.com/package/@james-pre/locales). `build` and `lint` generate the types for its keys into `src/.locale.ts`.
+
+`npm run build:sea` builds `build/save-timeline-linux-x64` with [xsea](https://github.com/james-pre/xsea).
+
+Releases are published to npm by CI, with the bindings prebuilt on Fedora, and the executable is attached to the GitHub release.

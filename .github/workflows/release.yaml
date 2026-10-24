@@ -1,0 +1,51 @@
+name: Release
+
+on:
+    release:
+        types: [published]
+
+jobs:
+    ci:
+        uses: ./.github/workflows/ci.yaml
+        permissions:
+            contents: read
+
+    release:
+        name: Publish
+        runs-on: ubuntu-latest
+        container: fedora:latest
+        needs: ci
+        permissions:
+            contents: write
+            id-token: write
+        steps:
+            - name: Install native dependencies
+              run: dnf install -y git gh gcc-c++ cmake make pkgconf-pkg-config gtk4-devel libadwaita-devel
+
+            - name: Checkout
+              uses: actions/checkout@v5
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v6
+              with:
+                  node-version: latest
+                  registry-url: https://registry.npmjs.org/
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Build
+              run: |
+                  npm run build:native
+                  npm run build
+
+            - name: Publish
+              run: npm publish --access=public --provenance
+
+            - name: Build single executable
+              run: npm run build:sea
+
+            - name: Upload release assets
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: gh release upload "${{ github.event.release.tag_name }}" build/save-timeline-linux-x64 --clobber --repo "$GITHUB_REPOSITORY"
