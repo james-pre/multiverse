@@ -62,6 +62,7 @@
 		"adw"
 	],
 	"dependencies": {
+		"@james-pre/config": "^1.2.1",
 		"@james-pre/locales": "^1.0.1",
 		"commander": "^15.0.0",
 		"girbind": "^0.6.1",

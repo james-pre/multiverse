@@ -2,6 +2,7 @@ import { closeSync, openSync, readSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { decodeUTF8 } from 'utilium';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
+import { ticksToDateTime } from '../../dotnet.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
 import type { Inspector } from '../index.js';
@@ -13,7 +14,6 @@ import {
 	parseFields,
 	readSaveFile,
 	readSlots,
-	ticksToDateTime,
 	type Fields,
 	type SaveFile,
 	type SlotInfo,
