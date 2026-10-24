@@ -67,6 +67,7 @@ export class SaveCard {
 		const inGameLabel = label();
 		inGameLabel.setLabel(text('archive.in_game'));
 		inGameLabel.setHexpand(true);
+		this.inGame.setHexpand(false);
 		this.inGame.append(inGameLabel);
 		this.inGame.append(this.inGameSwitch);
 		connect(this.inGameSwitch, 'state-set', (_, state) => {

@@ -2,13 +2,15 @@
 
 View game saves as branching timelines. Each playthrough is a tree, with saves as nodes placed by play time, and the tree splits wherever you loaded an older save and played on from it.
 
-Supported games:
+Supported games (Steam):
 
-- Cyberpunk 2077 (Steam).
-- The Elder Scrolls V: Skyrim Special Edition (Steam), including co-saves from the Skyrim Script Extender.
-- Diplomacy is Not an Option (Steam).
-- InfraSpace (Steam).
-- Plague Inc: Evolved (Steam).
+- Cyberpunk 2077
+- The Elder Scrolls V: Skyrim Special Edition, including co-saves from the Skyrim Script Extender
+- Diplomacy is Not an Option
+- InfraSpace
+- Plague Inc: Evolved
+- Schedule I
+- Subnautica
 
 ## Installation
 
@@ -29,11 +31,21 @@ multiverse                    # open the viewer, starting with a game picker
 multiverse --game cyberpunk   # open a game's timelines directly
 multiverse tree               # print the timelines of every game with saves
 multiverse inspect <save>     # show what is in a save file
+multiverse archive            # copy saves of games that save over them into the archive
+multiverse config set autoArchive true
 ```
 
 Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else. `inspect` recognizes the game from the file, and takes the sections to show (by default all of them, e.g. `header plugins globals changes` for Skyrim). An unknown section lists the ones the game has. For Skyrim, `--decompressed <path>` writes the save's data without compression for other tools.
 
 In the viewer, scroll to zoom, drag to pan, and click a save to select it. The card at the bottom shows the hovered or selected save, with buttons to make an automatic or quick save manual, open its folder, or move it to the trash. Right-clicking a save shows the same actions. The viewer reloads when saves change on disk.
+
+## Archive
+
+Some games save over their saves instead of making new ones: Schedule I has a fixed number of slots, and Subnautica saves each playthrough over its slot. For these games, Multiverse can keep copies of saves in its archive (`~/.local/share/multiverse/archive` on Linux, `%LOCALAPPDATA%\Multiverse\archive` on Windows), so a save the game writes over isn't lost.
+
+Archive a save with its card's Archive button, or turn on Archive Saves Automatically in Preferences (or `multiverse config set autoArchive true`) to copy each save as the game writes it while Multiverse is running. `multiverse archive --watch` does the same from a terminal. Archived saves join the timeline, drawn hollow while they aren't in the game.
+
+The card's In game switch puts an archived save back into the game's save folder, or takes one out of it. A save is always archived before Multiverse removes it from the game. In games with fixed slots each slot is its own tab, and putting a save in the game replaces the save in its slot. Archived saves from a slot that's now empty get tabs of their own. In other games, a save goes back in its own slot, or a new one if its slot holds a different save.
 
 ## How branches are inferred
 
