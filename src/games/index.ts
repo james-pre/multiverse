@@ -7,7 +7,9 @@ import { cyberpunk } from './cyberpunk/index.js';
 import { diplomacyIsNotAnOption } from './diplomacy-is-not-an-option/index.js';
 import { infraspace } from './infraspace/index.js';
 import { plagueInc } from './plague-inc/index.js';
+import { scheduleI } from './schedule-i/index.js';
 import { skyrim } from './skyrim/index.js';
+import { subnautica } from './subnautica/index.js';
 
 /** Something a game lets you do with a save, beyond deleting it. */
 export interface SaveAction {
@@ -57,7 +59,10 @@ export interface Game {
 }
 
 export const games = new Map<string, Game>(
-	[cyberpunk, skyrim, diplomacyIsNotAnOption, infraspace, plagueInc].map(game => [game.id, game])
+	[cyberpunk, skyrim, diplomacyIsNotAnOption, infraspace, plagueInc, scheduleI, subnautica].map(game => [
+		game.id,
+		game,
+	])
 );
 
 export function getGame(id: string): Game {

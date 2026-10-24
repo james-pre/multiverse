@@ -27,14 +27,18 @@
 		"open": "Open Folder",
 		"delete": "Delete",
 		"done": "{action}: {name}",
-		"inspect": "Inspect"
+		"inspect": "Inspect",
+		"archive": "Archive",
+		"put_in_game": "Put in Game",
+		"remove_from_game": "Remove from Game"
 	},
 	"delete": {
 		"heading": "Delete {name}?",
 		"body": "“{label}” will be moved to the trash. Steam Cloud may remove it from the cloud too.",
 		"cancel": "Cancel",
 		"confirm": "Move to Trash",
-		"done": "Moved {name} to the trash"
+		"done": "Moved {name} to the trash",
+		"body_archived": "“{label}” and its archived copy will be moved to the trash. Steam Cloud may remove it from the cloud too."
 	},
 	"cyberpunk": {
 		"playthrough": "{life_path} · Level {level}",
@@ -343,6 +347,78 @@
 			"of": "{count} of {total}",
 			"won": "Won",
 			"country_dead": "{dead} dead of {population}"
+		}
+	},
+	"archive": {
+		"archived": "Archived",
+		"in_game": "In game",
+		"done": "Archived {name}",
+		"put": "Put {name} in the game",
+		"replaced": "Put {name} in the game and archived {replaced}",
+		"removed": "Removed {name} from the game, its copy is in the archive",
+		"auto": {
+			"one": "Archived {count} {game} save",
+			"other": "Archived {count} {game} saves"
+		}
+	},
+	"menu": {
+		"preferences": "Preferences"
+	},
+	"preferences": {
+		"archive": {
+			"title": "Archive",
+			"description": "Copies of saves from games that save over them, so overwriting a save doesn't lose it"
+		},
+		"auto_archive": {
+			"title": "Archive Saves Automatically",
+			"subtitle": "Copy each save into the archive when a game writes it. This only works while Multiverse is running."
+		},
+		"folder": {
+			"title": "Archive Folder",
+			"open": "Open Archive Folder"
+		}
+	},
+	"schedule": {
+		"playthrough": "{organisation} · {slot}",
+		"slot": "Slot {number}",
+		"day": "Day {day}",
+		"rank": {
+			"unknown": "Rank {rank}",
+			"0": "Street Rat",
+			"1": "Hoodlum",
+			"2": "Peddler",
+			"3": "Hustler",
+			"4": "Bagman",
+			"5": "Enforcer",
+			"6": "Shot Caller",
+			"7": "Block Boss",
+			"8": "Underlord",
+			"9": "Baron",
+			"10": "Kingpin"
+		},
+		"detail": {
+			"balance": "Balance",
+			"quests": "Quests completed",
+			"version": "Version"
+		}
+	},
+	"subnautica": {
+		"playthrough": "{mode} · Started {started}",
+		"slot": "Slot {number}",
+		"mode": {
+			"unknown": "Mode {mode}",
+			"0": "Survival"
+		},
+		"build": {
+			"basePresent": "Base",
+			"seamothPresent": "Seamoth",
+			"cyclopsPresent": "Cyclops",
+			"exosuitPresent": "Prawn Suit",
+			"rocketPresent": "Rocket"
+		},
+		"detail": {
+			"started": "Started",
+			"build": "Game build"
 		}
 	}
 }
