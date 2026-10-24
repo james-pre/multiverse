@@ -7,6 +7,11 @@
 		"no": "No"
 	},
 	"play_time": "{hours}h {minutes}m",
+	"picker": {
+		"title": "Games",
+		"description": "Choose a game to see its saves as timelines",
+		"no_saves": "No saves found"
+	},
 	"card": {
 		"empty": "Hover over a save to see its details",
 		"separator": "  ·  "

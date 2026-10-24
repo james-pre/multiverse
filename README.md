@@ -21,11 +21,12 @@ npm only runs the install script, which adds a desktop entry and icon so Save Ti
 ## Usage
 
 ```sh
-save-timeline        # open the viewer
-save-timeline tree   # print the inferred timelines
+save-timeline                    # open the viewer, starting with a game picker
+save-timeline --game cyberpunk   # open a game's timelines directly
+save-timeline tree               # print the timelines of every game with saves
 ```
 
-Both commands take `--game <id>` and `--directory <path>` for saves outside the default location.
+Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else.
 
 In the viewer, scroll to zoom, drag to pan, and click a save to select it. The card at the bottom shows the hovered or selected save, with buttons to make an automatic or quick save manual, open its folder, or move it to the trash. Right-clicking a save shows the same actions. The viewer reloads when saves change on disk.
 

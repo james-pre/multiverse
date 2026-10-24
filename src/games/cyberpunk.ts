@@ -1,22 +1,10 @@
 import * as io from 'ioium';
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import * as z from 'zod';
 import { text } from '../i18n.js';
 import type { Save } from '../save.js';
 import type { Game } from './index.js';
-
-const savesPath = 'Saved Games/CD Projekt Red/Cyberpunk 2077';
-const protonPath = join('steamapps/compatdata/1091500/pfx/drive_c/users/steamuser', savesPath);
-
-const platformDirectories: Partial<Record<NodeJS.Platform, string[]>> = {
-	linux: [
-		join(homedir(), '.local/share/Steam', protonPath),
-		join(homedir(), '.var/app/com.valvesoftware.Steam/.local/share/Steam', protonPath),
-	],
-	win32: [join(homedir(), savesPath)],
-};
 
 const Metadata = z.object({
 	Data: z.object({
@@ -135,7 +123,7 @@ export function convertToManual(save: Save): void {
 export const cyberpunk: Game = {
 	id: 'cyberpunk',
 	name: 'Cyberpunk 2077',
-	defaultDirectories: platformDirectories[process.platform] ?? [],
+	steam: { id: 1091500, saves: 'Saved Games/CD Projekt Red/Cyberpunk 2077' },
 	describe(timeline) {
 		const metadata = timeline.nodes.map(node => metadataOf.get(node.save)!);
 		const latest = metadata.at(-1)!;

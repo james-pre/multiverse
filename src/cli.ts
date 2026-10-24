@@ -1,35 +1,52 @@
 import { Command, Option } from 'commander';
 import * as io from 'ioium/node';
-import { existsSync } from 'node:fs';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
 import { defaultDataDirectory, installEntry, uninstallEntry } from './desktop.js';
-import { games, getGame, type Game } from './games/index.js';
+import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
 import { Timeline } from './timeline.js';
 
 interface ScanOptions {
-	game: string;
+	game?: string;
 	directory?: string;
 }
 
-function resolve(options: ScanOptions): { game: Game; directory: string } {
+/** The chosen game and where its saves are, or every game with saves on this machine. */
+function locate(options: ScanOptions): SaveLocation[] {
+	if (!options.game) {
+		if (options.directory) io.exit('--directory needs --game');
+		return [...games.values()].flatMap(game => {
+			const [directory] = findSaveDirectories(game);
+			return directory ? [{ game, directory }] : [];
+		});
+	}
+
 	const game = getGame(options.game);
-	const directory = options.directory ?? game.defaultDirectories.find(path => existsSync(path));
+	const directory = options.directory ?? findSaveDirectories(game)[0];
 	if (!directory) io.exit(`Could not find ${game.name} saves, use --directory to specify where they are`);
-	return { game, directory };
+	return [{ game, directory }];
 }
 
-function loadTimelines(options: ScanOptions): Timeline[] {
-	const { game, directory } = resolve(options);
-	const saves = io.track(`Scanning ${directory}`, () => game.scan(directory));
-	return Timeline.fromSaves(saves);
+function printTimeline(game: Game, timeline: Timeline): void {
+	io.log(styleText('bold', `${game.describe(timeline)} (${timeline.nodes.length} saves)`));
+
+	for (const { node, isBranchStart, depth } of timeline.walk()) {
+		const { save } = node;
+		const indent = '  '.repeat(depth) + (isBranchStart && node.parent ? '↳ ' : '  ');
+		const time = save.time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+		io.log(
+			(indent + save.name).padEnd(32)
+				+ duration(save.playTime).padStart(10)
+				+ '  '
+				+ styleText('dim', time.padEnd(20))
+				+ save.label
+		);
+	}
 }
 
-const gameOption = new Option('-g, --game <id>', 'Game the saves are from')
-	.choices([...games.keys()])
-	.default('cyberpunk');
-const directoryOption = new Option('-d, --directory <path>', 'Directory containing the saves');
+const gameOption = new Option('-g, --game <id>', 'Game the saves are from').choices([...games.keys()]);
+const directoryOption = new Option('-d, --directory <path>', 'Directory containing the saves, with --game');
 
 const cli = new Command('save-timeline').version($pkg.version).description($pkg.description).showHelpAfterError();
 
@@ -38,33 +55,24 @@ cli.command('tree')
 	.addOption(gameOption)
 	.addOption(directoryOption)
 	.action(options => {
-		for (const timeline of loadTimelines(options)) {
-			io.log(styleText('bold', `${timeline.playthrough} (${timeline.nodes.length} saves)`));
+		const located = locate(options);
+		if (!located.length) io.exit('Could not find saves for any supported game, use --game and --directory');
 
-			for (const { node, isBranchStart, depth } of timeline.walk()) {
-				const { save } = node;
-				const indent = '  '.repeat(depth) + (isBranchStart && node.parent ? '↳ ' : '  ');
-				const time = save.time.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
-				io.log(
-					(indent + save.name).padEnd(32)
-						+ duration(save.playTime).padStart(10)
-						+ '  '
-						+ styleText('dim', time.padEnd(20))
-						+ save.label
-				);
-			}
+		for (const { game, directory } of located) {
+			const saves = io.track(`Scanning ${game.name} saves in ${directory}`, () => game.scan(directory));
+			for (const timeline of Timeline.fromSaves(saves)) printTimeline(game, timeline);
 		}
 	});
 
 cli.command('gui', { isDefault: true })
-	.description('Open the timeline viewer')
+	.description('Open the timeline viewer, starting with a game picker unless --game is given')
 	.addOption(gameOption)
 	.addOption(directoryOption)
 	.action(async options => {
-		const { game, directory } = resolve(options);
+		const [location] = options.game ? locate(options) : [];
 		const entry = './gui/main.js';
-		const gui = (await import(entry)) as { run(game: Game, directory: string): void };
-		gui.run(game, directory);
+		const gui = (await import(entry)) as { run(location?: SaveLocation): void };
+		gui.run(location);
 	});
 
 const dataDirectoryOption = new Option('--data-directory <path>', 'Where to link them').default(

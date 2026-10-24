@@ -2,7 +2,7 @@ import { connect, keepAlive } from 'girbind';
 import { existsSync, readFileSync } from 'node:fs';
 import * as Adw from '../../native/adw.js';
 import * as Gio from '../../native/gio.js';
-import type { Game } from '../games/index.js';
+import type { SaveLocation } from '../games/index.js';
 import { MainWindow } from './window.js';
 
 /**
@@ -15,7 +15,8 @@ function canUsePortal(): boolean {
 	return /^CapPrm:\s*0+$/m.test(status);
 }
 
-export function run(game: Game, directory: string): void {
+/** Open the app, going straight to a game's timelines if `location` is given. */
+export function run(location?: SaveLocation): void {
 	// Without the portal, libadwaita reads the color scheme from GSettings instead.
 	if (!canUsePortal()) process.env.ADW_DISABLE_PORTAL = '1';
 
@@ -23,9 +24,10 @@ export function run(game: Game, directory: string): void {
 
 	connect(app, 'activate', () => {
 		const hold = keepAlive();
-		const { window } = new MainWindow(app, game, directory);
-		connect(window, 'close-request', () => hold.release());
-		window.present();
+		const main = new MainWindow(app);
+		if (location) main.open(location);
+		connect(main.window, 'close-request', () => hold.release());
+		main.window.present();
 	});
 
 	app.register(null);
