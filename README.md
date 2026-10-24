@@ -47,6 +47,14 @@ Archive a save with its card's Archive button, or turn on Archive Saves Automati
 
 The card's In game switch puts an archived save back into the game's save folder, or takes one out of it. A save is always archived before Multiverse removes it from the game. In games with fixed slots each slot is its own tab, and putting a save in the game replaces the save in its slot. Archived saves from a slot that's now empty get tabs of their own. In other games, a save goes back in its own slot, or a new one if its slot holds a different save.
 
+## Editing
+
+The inspector can change values in saves of every game except Subnautica. Values that are unlikely to break a save can be changed right away, like Cyberpunk 2077's unspent attribute and perk points, money in Schedule I, resources in Diplomacy is Not an Option and InfraSpace, and DNA points in Plague Inc. Turn on Expert Mode in an inspector window to change any other value it shows, in the overview or the contents.
+
+Save Copy writes the changes to a new save beside the original, which the game lists as another save, and keeps writing to that copy while the window is open. Overwrite Original replaces the save instead, archiving it first for games with an archive. Edited saves can be corrupted or break the game in ways that only show up later, so keep the original until the copy works.
+
+From a terminal, `multiverse inspect <save> --set 'money/Bank balance=1000'` changes rows by their section and labels, which `inspect` marks as editable, and writes a copy. `--expert` allows changing any editable row, and `--in-place` overwrites the save.
+
 ## How branches are inferred
 
 Most games don't record which "parent" save a save was loaded from, so the tree is inferred from each save's play time, wall-clock time and progress markers (e.g. finished quests). A candidate ancestor must have less play time, a subset of the progress, and enough wall-clock time before the save to account for the play time in between. Among those candidates the parent is the one with the most play time among saves from the same session, where wall-clock and play time differ by at most `sessionGap`, otherwise it's the one with the most play time overall (which is the save most likely loaded).
@@ -69,3 +77,11 @@ UI text is in `locales/`, using [`@james-pre/locales`](https://www.npmjs.com/pac
 `npm run build:sea` builds `build/multiverse-linux-x64` with [xsea](https://github.com/james-pre/xsea).
 
 Releases are published to npm by CI, with the bindings prebuilt on Fedora, and the executable is attached to the GitHub release.
+
+To make a game's saves editable, give the `Row`s and `Entry`s its inspection shows an `edit` (see `src/editing.ts`), marking it `safe` if the value can be changed outside of expert mode, then add `write` to the inspection and `copy` to the inspector. Inspections don't parse values again to write them, so:
+
+- JSON saves read their files with `JsonDocument`, whose `edit` changes a value's text and leaves the rest of the file as it was.
+- Binary saves record where values of fixed-size types are with `Locations` while parsing, change them in the data with `binaryEdit`, and write the data back, compressing it again if it was.
+- Saves read through views of their data, like Skyrim's structs, use `propertyEdit`.
+
+`copy` uses `copySave` with the game's name for the copy, such as the next free slot.

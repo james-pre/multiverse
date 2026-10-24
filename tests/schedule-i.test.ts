@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { scheduleI } from '../src/games/schedule-i/index.js';
+import { inspector } from '../src/games/schedule-i/inspect.js';
 import { rankName } from '../src/games/schedule-i/names.js';
 import { Timeline } from '../src/timeline.js';
 
@@ -56,5 +57,44 @@ suite('Schedule I', () => {
 
 	test('rankName falls back to the number of ranks it does not know', () => {
 		assert.equal(rankName(99, 1), 'Rank 99 I');
+	});
+
+	test('edits the bank balance and cash, writing them to a copy in a free slot', () => {
+		const path = join(directory, 'SaveGame_1');
+		mkdirSync(join(path, 'Players/Player_0'), { recursive: true });
+		const cash = JSON.stringify({ DataType: 'CashData', ID: 'cash', CashBalance: 25.5 });
+		writeFileSync(
+			join(path, 'Players/Player_0/Inventory.json'),
+			JSON.stringify({ Items: [JSON.stringify({ ID: 'machete' }), cash] }, null, 4)
+		);
+
+		const inspection = inspector.open(path);
+		const money = inspection.section('money');
+		const balance = money.find(row => row.label == 'Bank balance')!;
+		const pocket = money.find(row => row.label == 'Cash')!;
+		assert.ok(balance.edit?.safe && pocket.edit?.safe);
+		assert.ok(!money.find(row => row.label == 'Net worth')?.edit?.safe);
+		balance.edit.set(1000);
+		pocket.edit.set(75);
+		assert.throws(() => pocket.edit!.set(-1), /lowest/);
+
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		assert.equal(copy, join(directory, 'SaveGame_3'));
+		const copied = inspector.open(copy).section('money');
+		assert.equal(copied.find(row => row.label == 'Bank balance')?.value, '$1,000');
+		assert.equal(copied.find(row => row.label == 'Cash')?.value, '$75');
+		assert.equal(
+			inspector
+				.open(path)
+				.section('money')
+				.find(row => row.label == 'Cash')?.value,
+			'$26'
+		);
+	});
+
+	test('copies need a free slot', () => {
+		for (const slot of [4, 5]) writeSlot(slot, 100, 0);
+		assert.throws(() => inspector.copy!(join(directory, 'SaveGame_1')), /Every save slot/);
 	});
 });

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
@@ -45,6 +45,15 @@ function writeSave({ name, time, playTime, kills, research, mission = 7 }: SaveO
 		deathCounter: {
 			[nrbf.className]: 'Components.SingletonComponents.KilledEnemiesCounterSingleton',
 			value: kills,
+		},
+		currentGold: {
+			[nrbf.className]: 'Components.ResourceSaveData',
+			valueContainer: {
+				[nrbf.className]: 'Components.ResourceValueContainer',
+				value: 100,
+				dailyIncrease: 5,
+				dailyDecrease: 1,
+			},
 		},
 	};
 	writeFileSync(path, serialize(container));
@@ -96,10 +105,7 @@ suite('diplomacy is not an option', () => {
 		assert.ok(inspector.recognizes(path));
 		assert.ok(inspector.recognizes(`${path}.dat`));
 		const inspection = inspector.open(`${path}.dat`);
-		assert.deepEqual(
-			inspection.section('session').find(row => row.label == 'Enemies killed'),
-			{ label: 'Enemies killed', value: '50' }
-		);
+		assert.equal(inspection.section('session').find(row => row.label == 'Enemies killed')?.value, '50');
 		const [buildings] = inspection.section('research');
 		assert.equal(buildings.value, '3');
 		assert.deepEqual(
@@ -107,5 +113,21 @@ suite('diplomacy is not an option', () => {
 			['1', '2', '3']
 		);
 		assert.ok(inspection.section('entities').some(row => row.label == 'Citizens' && row.value == '3'));
+	});
+
+	test('edits resources and writes them to a copy beside the save', () => {
+		const path = join(directory, 'Lord', 'Grrr');
+		const inspection = inspector.open(path);
+		const [resource] = inspection.section('resources');
+		assert.ok(resource.edit?.safe);
+		resource.edit.set(1234);
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		assert.equal(copy, join(directory, 'Lord', 'Grrr copy'));
+		assert.ok(existsSync(`${copy}.dat`));
+		assert.equal(inspector.open(copy).section('resources')[0].value, '1,234');
+		assert.equal(inspector.open(path).section('resources')[0].value, resource.value);
+		rmSync(copy);
+		rmSync(`${copy}.dat`);
 	});
 });

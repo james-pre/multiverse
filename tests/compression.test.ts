@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { encodeUTF8, decodeUTF8 } from 'utilium';
-import { decompressLZ4, decompressLzf } from '../src/compression.js';
+import { compressLZ4, compressLzf, decompressLZ4, decompressLzf } from '../src/compression.js';
 
 /** An LZ4 block that stores all of `data` as literals */
 export function literalBlock(data: Uint8Array): Uint8Array {
@@ -60,5 +60,28 @@ suite('lzf', () => {
 
 	test('rejects references before the start', () => {
 		assert.throws(() => decompressLzf(new Uint8Array([0, 0x61, 0x20, 9])));
+	});
+});
+
+/** Data with repeats, runs and noise, which exercises every kind of match */
+function sample(): Uint8Array[] {
+	const text = encodeUTF8('The quick brown fox jumps over the lazy dog. '.repeat(500));
+	const noise = new Uint8Array(70_000).map((_, i) => (Math.imul(i, 2654435761) >>> 24) & 0xff);
+	const mixed = new Uint8Array([...text, ...noise, ...new Uint8Array(1000).fill(7), ...text.subarray(0, 300)]);
+	return [new Uint8Array(0), new Uint8Array([1, 2, 3]), new Uint8Array(12).fill(9), text, noise, mixed];
+}
+
+suite('compression', () => {
+	test('compressLZ4 writes blocks that decompress to the same data', () => {
+		for (const data of sample()) {
+			const compressed = compressLZ4(data);
+			assert.deepEqual(decompressLZ4(compressed, data.length), data);
+		}
+		assert.ok(compressLZ4(sample()[3]).length < sample()[3].length / 10);
+	});
+
+	test('compressLzf writes data that decompresses to the same data', () => {
+		for (const data of sample()) assert.deepEqual(decompressLzf(compressLzf(data)), data);
+		assert.ok(compressLzf(sample()[3]).length < sample()[3].length / 10);
 	});
 });

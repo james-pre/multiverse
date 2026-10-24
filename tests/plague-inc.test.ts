@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
@@ -7,7 +7,7 @@ import { encodeUTF8 } from 'utilium';
 import { plagueInc } from '../src/games/plague-inc/index.js';
 import { inspector } from '../src/games/plague-inc/inspect.js';
 import { ticksToDateTime } from '../src/dotnet.js';
-import { decodeValue } from '../src/games/plague-inc/save-file.js';
+import { decodeValue, readField, replaceField } from '../src/games/plague-inc/save-file.js';
 import { Timeline } from '../src/timeline.js';
 import { literalLzf } from './compression.test.js';
 
@@ -38,6 +38,7 @@ function writeSave({ slot, start, day, gameTime, history }: SaveOptions): void {
 		diseaseTypeGui: 'Neurax Worm',
 		difficulty: '2',
 		turnNumber: String(day),
+		evoPoints: '12',
 		totalInfected: '2086',
 		totalDead: '0',
 		cureCompletePercent: '0.25',
@@ -110,5 +111,40 @@ suite('plague inc', () => {
 		assert.deepEqual(inspection.section('countries'), [
 			{ label: 'USA', value: '50%', detail: '10% dead of 316,128,839' },
 		]);
+	});
+
+	test('replaceField changes every line of a nested field, encoding each level as it was', () => {
+		const text = `a:1\n0:${base64(base64('dna:5\nx:y\ndna:5\n'))}`;
+		const replaced = replaceField(text, ['0', 'dna'], '9');
+		assert.equal(readField(replaced, ['0', 'dna']), '9');
+		assert.equal(replaced, `a:1\n0:${base64(base64('dna:9\nx:y\ndna:9\n'))}`);
+	});
+
+	test('edits DNA points and writes them to a copy in the next slot, which the slot list includes', () => {
+		const path = join(directory, 'save_22.dat');
+		const inspection = inspector.open(path);
+		const dna = inspection.section('disease').find(row => row.label == 'DNA points')!;
+		assert.ok(dna.edit?.safe);
+		assert.equal(dna.edit.value, 12);
+		dna.edit.set(500);
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		assert.equal(copy, join(directory, 'save_24.dat'));
+		assert.equal(
+			inspector
+				.open(copy)
+				.section('disease')
+				.find(row => row.label == 'DNA points')?.value,
+			'500'
+		);
+		assert.equal(
+			inspector
+				.open(path)
+				.section('disease')
+				.find(row => row.label == 'DNA points')?.value,
+			'12'
+		);
+		assert.match(readFileSync(join(directory, 'meta.dat'), 'utf8'), /^24:184:/m);
+		assert.equal(plagueInc.scan(directory).find(save => save.path == copy)?.name, 'Slot 24');
 	});
 });

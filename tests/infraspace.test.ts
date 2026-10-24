@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
@@ -34,6 +34,7 @@ function writeSave({ version, name, date, playTime, nextId, research, map }: Sav
 		researchManager: { researchProgress: research, currentResearch: null, researchQueue: [] },
 		populationManager: { cityLevel: 3 },
 		storyMessagesModule: { shownMessages: ['Welcome'] },
+		resources: { concrete: 1500, steel: 20 },
 	};
 	const header = ['InfraSpace', version, ...(map ? [map] : []), date];
 	mkdirSync(join(directory, version), { recursive: true });
@@ -117,5 +118,21 @@ suite('infraspace', () => {
 			['Farming', 'Trains']
 		);
 		assert.ok(inspection.section('contents').some(row => row.label == 'Buildings' && row.value == '100'));
+	});
+
+	test('edits resources and writes only them to a copy beside the save', () => {
+		const path = join(directory, 'InfraSpace 1.56.460', 'Kurai v2.sav');
+		const inspection = inspector.open(path);
+		const concrete = inspection.section('resources').find(row => row.label == 'Concrete')!;
+		assert.ok(concrete.edit?.safe);
+		concrete.edit.set(9000);
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		assert.equal(copy, join(directory, 'InfraSpace 1.56.460', 'Kurai v2 copy.sav'));
+		assert.equal(
+			readFileSync(copy, 'utf8'),
+			readFileSync(path, 'utf8').replace('"concrete": 1500', '"concrete": 9000')
+		);
+		rmSync(copy);
 	});
 });

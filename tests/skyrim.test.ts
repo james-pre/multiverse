@@ -153,4 +153,26 @@ suite('skyrim', () => {
 			['Skyrim.esm']
 		);
 	});
+
+	test('edits the level and misc stats, writing them to a copy with the next save number', () => {
+		const path = skyrim.scan(directory).find(save => save.name == 'Save 3')!.path;
+		const inspection = inspector.open(path);
+		const level = inspection.section('character').find(row => row.label == 'Level')!;
+		assert.ok(level.edit && !level.edit.safe);
+		level.edit.set(50);
+		const quests = inspection
+			.section('stats')
+			.flatMap(row => row.rows ?? [])
+			.find(row => row.label == 'Quests Completed')!;
+		quests.edit!.set(99);
+
+		const copy = inspector.copy!(path);
+		inspection.write!(copy);
+		assert.match(copy, /Save4_7C72702B_/);
+		const save = skyrim.scan(directory).find(save => save.path == copy)!;
+		assert.equal(save.counters?.level, 50);
+		assert.equal(save.counters?.['Quests Completed'], 99);
+		assert.equal(skyrim.scan(directory).find(save => save.path == path)?.counters?.level, 10);
+		rmSync(copy);
+	});
 });

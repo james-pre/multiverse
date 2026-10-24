@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { factHash } from '../src/games/cyberpunk/facts.js';
+import { binaryEdit } from '../src/editing.js';
+import { factHash, readFacts } from '../src/games/cyberpunk/facts.js';
 import { typeName } from '../src/games/cyberpunk/package.js';
 import { SaveFile, unpackDateTime } from '../src/games/cyberpunk/save-file.js';
 import { literalBlock } from './compression.test.js';
@@ -201,5 +202,28 @@ suite('cyberpunk save file', () => {
 		assert.deepEqual(root.tags, ['level', 'mode']);
 		assert.equal(root.child, child);
 		assert.equal(child.name, 'x');
+	});
+
+	test('writes changes to package values and facts, keeping the layout', () => {
+		const file = new SaveFile(path);
+		const node = file.find('ScriptableSystemsContainer')!;
+		const container = file.package(node);
+		const [root] = container.objects;
+		container.locations.edit(root, 'level')!.set(7);
+		assert.equal(root.level, 7);
+		const facts = file.nodeData(file.find('FactsTable')!);
+		const [fact] = readFacts(facts);
+		binaryEdit({ data: facts, offset: fact.offset, type: 'i32' }).set(42);
+
+		const copy = join(directory, 'edited.dat');
+		file.write(copy);
+		const edited = new SaveFile(copy);
+		assert.equal(edited.package(edited.find('ScriptableSystemsContainer')!).objects[0].level, 7);
+		assert.equal(edited.facts().get(factHash('q001_done')), 42);
+		assert.deepEqual(
+			edited.nodes.map(node => [node.name, node.size]),
+			file.nodes.map(node => [node.name, node.size])
+		);
+		assert.equal(new SaveFile(path).facts().get(factHash('q001_done')), 1);
 	});
 });
