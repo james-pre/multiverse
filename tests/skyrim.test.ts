@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { parsePlayTime, skyrim } from '../src/games/skyrim/index.js';
+import { skyrim } from '../src/games/skyrim/index.js';
+import { parsePlayTime } from '../src/games/skyrim/strings.js';
 import { inspector } from '../src/games/skyrim/inspect.js';
 import { literalBlock } from './lz4.test.js';
 

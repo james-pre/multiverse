@@ -1,6 +1,5 @@
 import { struct, types as t } from 'memium';
 import refs from './refs.json' with { type: 'json' };
-import { styleText } from 'node:util';
 
 export class RefID extends struct.packed('RefID', {
 	byte0: t.uint8,
@@ -13,14 +12,9 @@ export class RefID extends struct.packed('RefID', {
 
 	pretty(): string {
 		const hex = this.toString();
-		return styleText(
-			'cyanBright',
-			hex.toUpperCase() in refs
-				? refs[hex.toUpperCase() as keyof typeof refs]
-				: hex.toLowerCase() in refs
-					? refs[hex.toLowerCase() as keyof typeof refs]
-					: hex
-		);
+		if (hex.toUpperCase() in refs) return refs[hex.toUpperCase() as keyof typeof refs];
+		if (hex.toLowerCase() in refs) return refs[hex.toLowerCase() as keyof typeof refs];
+		return hex;
 	}
 
 	get type(): RefIDType {

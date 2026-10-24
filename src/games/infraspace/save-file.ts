@@ -82,11 +82,14 @@ function decode(buffer: Buffer): string {
 }
 
 export function isSave(path: string): boolean {
-	const fd = openSync(path, 'r');
+	let fd: number | undefined;
 	try {
+		fd = openSync(path, 'r');
 		return decode(read(fd, 0, 64)).startsWith('InfraSpace\r\n');
+	} catch {
+		return false;
 	} finally {
-		closeSync(fd);
+		if (fd !== undefined) closeSync(fd);
 	}
 }
 

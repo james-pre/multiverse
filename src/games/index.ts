@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import type { Inspection, Section } from '../inspection.js';
 import type { Save } from '../save.js';
 import * as steam from '../steam.js';
 import type { Timeline } from '../timeline.js';
@@ -15,14 +16,13 @@ export interface SaveAction {
 	run(save: Save): void;
 }
 
-/** Describes save files in detail, by section. */
+/** Reads saves in detail, with the most useful information in sections and everything else in their contents. */
 export interface Inspector {
-	/** Descriptions of the sections it can show, by name */
-	sections: Record<string, string>;
-	/** Whether a file is a save this can read */
+	/** The sections it shows, by name, in order */
+	sections: Record<string, Section>;
+	/** Whether a file or directory is a save this can read */
 	recognizes(path: string): boolean;
-	/** Lines describing the chosen sections of a save */
-	inspect(path: string, sections: ReadonlySet<string>): Iterable<string>;
+	open(path: string): Inspection;
 	/** The save's data without compression, for other tools */
 	decompress?(path: string): Uint8Array;
 }

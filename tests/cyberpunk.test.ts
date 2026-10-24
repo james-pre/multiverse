@@ -3,7 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { convertToManual, cyberpunk, parseTimestamp } from '../src/games/cyberpunk/index.js';
+import { convertToManual, cyberpunk } from '../src/games/cyberpunk/index.js';
+import { parseTimestamp } from '../src/games/cyberpunk/metadata.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

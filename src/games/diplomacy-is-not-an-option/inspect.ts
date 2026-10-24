@@ -1,73 +1,134 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { duration } from 'utilium/format';
+import { basename } from 'node:path';
+import { formatValue, hoursAndMinutes } from '../../format.js';
+import { text } from '../../i18n.js';
+import type { Entry, Inspection, Row } from '../../inspection.js';
 import * as nrbf from '../../nrbf.js';
 import type { Inspector } from '../index.js';
 import { isSave, readContainer, savePath, type Resource, type SaveContainer } from './container.js';
 
 const sections = {
-	header: 'The header beside the save, with campaign progress',
-	session: 'The map, mission, play time and resources',
-	research: 'Completed buildings and research',
-	entities: 'How many of each kind of thing the save has',
-	members: 'Every member of the save, with long arrays shortened',
+	session: { title: text('dinao.section.session.title'), description: text('dinao.section.session.description') },
+	resources: {
+		title: text('dinao.section.resources.title'),
+		description: text('dinao.section.resources.description'),
+	},
+	research: { title: text('dinao.section.research.title'), description: text('dinao.section.research.description') },
+	entities: { title: text('dinao.section.entities.title'), description: text('dinao.section.entities.description') },
 };
-
-function* header(path: string): Generator<string> {
-	const headerPath = `${path}.dat`;
-	if (!existsSync(headerPath)) return yield 'Header: missing';
-	yield* nrbf.dump('Header', nrbf.parse(readFileSync(headerPath)), { depth: 2, items: 8 });
-}
 
 function isResource(value: unknown): value is Resource {
 	return nrbf.isInstance(value) && nrbf.isInstance(value.valueContainer);
 }
 
-function* session(container: SaveContainer): Generator<string> {
-	const { sessionTime } = container;
-	yield 'Session:';
-	yield `\tsave version: ${container.saveVersion}`;
-	yield `\tmap seed: ${container.mapSeed}`;
-	yield `\tmission: ${container.missionIndex}${container.isSpecialMission ? ' (special)' : ''}`;
-	yield `\tdifficulty: ${container.difficultyIndex}`;
-	if (sessionTime.elapsedTimeUnscaled !== undefined)
-		yield `\tplay time: ${duration(sessionTime.elapsedTimeUnscaled)}`;
-	yield `\tgame time: ${duration(sessionTime.elapsedTime)}`;
-	yield `\tenemies killed: ${container.deathCounter.value}`;
-	yield '\tresources:';
-	for (const [name, value] of Object.entries(container)) {
-		if (!name.startsWith('current') || !isResource(value)) continue;
-		const { value: amount, dailyIncrease, dailyDecrease } = value.valueContainer;
-		yield `\t\t${name.slice('current'.length)}: ${amount} (+${dailyIncrease} / -${dailyDecrease} a day)`;
-	}
+/** Turns member names like `treeSaveData` into names like `Tree` */
+function memberName(name: string): string {
+	const words = name.replace(/(SaveData)+$|Data$/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+	return words.charAt(0).toUpperCase() + words.slice(1).toLowerCase();
 }
 
-function* research({ research }: SaveContainer): Generator<string> {
-	yield 'Research:';
-	if (research.currentResearchId != -1) {
-		yield `\tcurrent: ${research.currentResearchId} (${research.progress} done)`;
-	}
-	yield `\tbuildings (${research.completeBuildings.length}): ${research.completeBuildings.join(', ')}`;
-	yield `\tresearch (${research.completeResearches.length}): ${research.completeResearches.join(', ')}`;
-}
+class DinoInspection implements Inspection {
+	protected readonly path: string;
+	protected readonly container: SaveContainer;
 
-function* entities(container: SaveContainer): Generator<string> {
-	yield 'Entities:';
-	for (const [name, value] of Object.entries(container)) {
-		const items = nrbf.listItems(value) ?? (Array.isArray(value) ? value : undefined);
-		if (items && !nrbf.isEnum(items[0])) yield `\t${name}: ${items.length}`;
+	public constructor(path: string) {
+		this.path = savePath(path);
+		this.container = readContainer(this.path);
+	}
+
+	protected session(): Row[] {
+		const { container } = this;
+		const { sessionTime } = container;
+		const rows: Row[] = [
+			{ label: text('dinao.row.mission'), value: String(container.missionIndex) },
+			{ label: text('dinao.row.map_seed'), value: String(container.mapSeed) },
+			{ label: text('dinao.row.difficulty'), value: formatValue(container.difficultyIndex) },
+		];
+		if (sessionTime.elapsedTimeUnscaled !== undefined) {
+			rows.push({ label: text('dinao.row.play_time'), value: hoursAndMinutes(sessionTime.elapsedTimeUnscaled) });
+		}
+		rows.push(
+			{ label: text('dinao.row.game_time'), value: hoursAndMinutes(sessionTime.elapsedTime) },
+			{ label: text('dinao.row.kills'), value: formatValue(container.deathCounter.value) },
+			{ label: text('dinao.row.save_version'), value: String(container.saveVersion) }
+		);
+		return rows;
+	}
+
+	protected resources(): Row[] {
+		const rows: Row[] = [];
+		for (const [name, value] of Object.entries(this.container)) {
+			if (!name.startsWith('current') || !isResource(value)) continue;
+			const { value: amount, dailyIncrease, dailyDecrease } = value.valueContainer;
+			const resource = name.slice('current'.length);
+			rows.push({
+				label: text(`dinao.resource.${resource}`, { $default: resource }),
+				value: formatValue(amount),
+				detail: text('dinao.row.daily', { increase: dailyIncrease, decrease: dailyDecrease }),
+			});
+		}
+		return rows;
+	}
+
+	protected research(): Row[] {
+		const { research } = this.container;
+		const rows: Row[] = [];
+		if (research.currentResearchId != -1) {
+			rows.push({
+				label: text('dinao.row.current_research'),
+				value: String(research.currentResearchId),
+				detail: text('dinao.row.progress', { progress: research.progress }),
+			});
+		}
+		const completed = [
+			[text('dinao.row.buildings'), research.completeBuildings],
+			[text('dinao.row.research'), research.completeResearches],
+		] as const;
+		for (const [label, ids] of completed) {
+			rows.push({ label, value: formatValue(ids.length), rows: Array.from(ids, id => ({ label: String(id) })) });
+		}
+		return rows;
+	}
+
+	protected entities(): Row[] {
+		const rows: Row[] = [];
+		for (const [name, value] of Object.entries(this.container)) {
+			const items = nrbf.listItems(value) ?? (Array.isArray(value) ? value : undefined);
+			if (!items?.length || nrbf.isEnum(items[0])) continue;
+			rows.push({ label: memberName(name), value: formatValue(items.length) });
+		}
+		return rows;
+	}
+
+	public section(name: string): Row[] {
+		switch (name) {
+			case 'session':
+				return this.session();
+			case 'resources':
+				return this.resources();
+			case 'research':
+				return this.research();
+			case 'entities':
+				return this.entities();
+		}
+		throw new Error(`Unknown section: ${name}`);
+	}
+
+	public contents(): Entry {
+		const headerPath = `${this.path}.dat`;
+		return {
+			name: basename(this.path),
+			summary: '',
+			children: () => [
+				...(existsSync(headerPath) ? [nrbf.entry('header', nrbf.parse(readFileSync(headerPath)))] : []),
+				nrbf.entry('save', this.container),
+			],
+		};
 	}
 }
 
 export const inspector: Inspector = {
 	sections,
 	recognizes: isSave,
-	*inspect(path, chosen) {
-		path = savePath(path);
-		const container = readContainer(path);
-		if (chosen.has('header')) yield* header(path);
-		if (chosen.has('session')) yield* session(container);
-		if (chosen.has('research')) yield* research(container);
-		if (chosen.has('entities')) yield* entities(container);
-		if (chosen.has('members')) yield* nrbf.dump('Save', container, { depth: 2 });
-	},
+	open: path => new DinoInspection(path),
 };

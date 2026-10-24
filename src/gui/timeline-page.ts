@@ -11,7 +11,7 @@ import { text } from '../i18n.js';
 import type { Save } from '../save.js';
 import { Timeline, type TimelineNode } from '../timeline.js';
 import type { Point } from '../viewport.js';
-import { shortDate } from './format.js';
+import { shortDate } from '../format.js';
 import { SaveCard, type CardAction } from './save-card.js';
 import { TimelineView } from './timeline-view.js';
 

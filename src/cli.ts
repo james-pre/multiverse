@@ -7,6 +7,7 @@ import { duration } from 'utilium/format';
 import { defaultDataDirectory, installEntry, uninstallEntry } from './desktop.js';
 import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
 import { text } from './i18n.js';
+import { entryLines, sectionLines } from './inspection.js';
 import { Timeline } from './timeline.js';
 
 interface ScanOptions {
@@ -67,10 +68,13 @@ cli.command('tree')
 	});
 
 cli.command('inspect')
-	.description('Show what is in a save file')
-	.argument('<save>', 'Path to the save file')
+	.description('Show what is in a save')
+	.argument('<save>', 'Path to the save file or folder')
 	.argument('[sections...]', 'Sections to show (default: all)')
 	.addOption(gameOption)
+	.option('--contents', 'Show the full contents of the save instead of its sections')
+	.option('--depth <levels>', 'How many levels of the contents to show', Number, 3)
+	.option('--items <count>', 'How many children of each value in the contents to show', Number, 10)
 	.option('--decompressed <path>', 'Also write the save data without compression to a file')
 	.action((path, sections, options) => {
 		const game = options.game
@@ -82,13 +86,22 @@ cli.command('inspect')
 		const unknown = sections.filter(section => !(section in inspector.sections));
 		if (unknown.length) {
 			const known = Object.entries(inspector.sections).map(
-				([name, description]) => `\n  ${name}: ${description}`
+				([name, section]) => `\n  ${name}: ${section.description}`
 			);
 			io.exit(`Unknown sections: ${unknown.join(', ')}. ${game.name} saves have:${known.join('')}`);
 		}
 
-		const chosen = new Set(sections.length ? sections : Object.keys(inspector.sections));
-		for (const line of inspector.inspect(path, chosen)) io.log(line);
+		const inspection = inspector.open(path);
+		if (options.contents) {
+			const lines = entryLines(inspection.contents(), { depth: options.depth, items: options.items });
+			for (const line of lines) io.log(line);
+		} else {
+			for (const name of sections.length ? sections : Object.keys(inspector.sections)) {
+				const [title, ...rows] = sectionLines(inspector.sections[name], inspection.section(name));
+				io.log(styleText('bold', title));
+				for (const row of rows) io.log(row);
+			}
+		}
 
 		if (!options.decompressed) return;
 		if (!inspector.decompress) io.exit(`${game.name} saves are not compressed`);

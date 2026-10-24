@@ -1,7 +1,8 @@
 import type { ArrayOf, InstanceOf, StructConstructor } from 'memium';
 import { struct, types as t } from 'memium';
-import { styleText } from 'node:util';
 import type { Entries } from 'utilium';
+import { bytes } from 'utilium/format';
+import type { Entry } from '../../inspection.js';
 import { formatNumber } from './format.js';
 import * as globals from './globals/index.js';
 import { getVsval } from './vsval.js';
@@ -139,7 +140,7 @@ export function* dumpGlobal<T extends GlobalDataType>(
 				if (!stats) continue;
 				yield `---- ${globals.StatCategory[category]} ----`;
 				for (const stat of stats) {
-					yield `${styleText('yellow', stat.name.toString())} = ${formatNumber(stat.value)}`;
+					yield `${stat.name.toString()} = ${formatNumber(stat.value)}`;
 				}
 			}
 
@@ -225,16 +226,27 @@ export function* dumpGlobal<T extends GlobalDataType>(
 	}
 }
 
-export function* dumpTable(table: ArrayOf<GlobalData>): Generator<string> {
-	for (const data of table) {
-		const name = GlobalDataType[data.type];
-		if (!name) {
-			yield `unknown type ${data.type}`;
-			continue;
-		}
-		yield `${name}:`;
-		const global = getGlobal(data);
-		if (!global) continue;
-		for (const line of dumpGlobal(data.type, global)) yield '\t' + String(line);
+/** Describes each global in a table, with the lines describing its data as children */
+export function tableEntries(table: ArrayOf<GlobalData>): Entry[] {
+	return Array.from(table, (data): Entry => {
+		const name = GlobalDataType[data.type] ?? `unknown type ${data.type}`;
+		const global = name && getGlobal(data);
+		return {
+			name,
+			summary: bytes(data.length),
+			children: global ? () => linesToEntries(Array.from(dumpGlobal(data.type, global), String)) : undefined,
+		};
+	});
+}
+
+/** Turns lines indented with tabs into entries, with indented lines as children of the line before them */
+function linesToEntries(lines: string[], depth = 0): Entry[] {
+	const entries: Entry[] = [];
+	for (let i = 0; i < lines.length; i++) {
+		const children: string[] = [];
+		while (lines[i + 1]?.startsWith('\t'.repeat(depth + 1))) children.push(lines[++i]);
+		const nested = children.length ? linesToEntries(children, depth + 1) : undefined;
+		entries.push({ name: lines[i].trim(), summary: '', children: nested && (() => nested) });
 	}
+	return entries;
 }

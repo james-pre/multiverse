@@ -5,7 +5,10 @@
 	"common": {
 		"yes": "Yes",
 		"no": "No",
-		"saves": { "one": "{count} save", "other": "{count} saves" }
+		"saves": {
+			"one": "{count} save",
+			"other": "{count} saves"
+		}
 	},
 	"play_time": "{hours}h {minutes}m",
 	"picker": {
@@ -23,7 +26,8 @@
 	"action": {
 		"open": "Open Folder",
 		"delete": "Delete",
-		"done": "{action}: {name}"
+		"done": "{action}: {name}",
+		"inspect": "Inspect"
 	},
 	"delete": {
 		"heading": "Delete {name}?",
@@ -46,6 +50,78 @@
 			"difficulty": "Difficulty",
 			"patch": "Patch",
 			"modded": "Modded"
+		},
+		"section": {
+			"character": {
+				"title": "Character",
+				"description": "Life path, attributes, skills and unspent points"
+			},
+			"perks": {
+				"title": "Perks",
+				"description": "Unlocked perks for each attribute"
+			},
+			"story": {
+				"title": "Story",
+				"description": "The tracked objective, finished quests and choices made"
+			},
+			"save": {
+				"title": "Save",
+				"description": "When the save was made, the game version and the file"
+			}
+		},
+		"row": {
+			"life_path": "Life path",
+			"body": "Body type",
+			"voice": "Voice tone",
+			"level": "Level",
+			"street_cred": "Street cred",
+			"attributes": "Attributes",
+			"skills": "Skills",
+			"experience": "{experience} XP",
+			"unspent": "Unspent points",
+			"attribute_points": "Attribute points",
+			"perk_points": "Perk points",
+			"relic_points": "Relic points",
+			"perk_level": "Level {level}",
+			"objective": "Tracked objective",
+			"finished_quests": "Finished quests",
+			"choices": "Choices",
+			"expansions": "Expansions",
+			"slot": "Slot",
+			"play_time": "Play time",
+			"save_date": "Saved",
+			"difficulty": "Difficulty",
+			"patch": "Patch",
+			"modded": "Modded",
+			"point_of_no_return": "Point of no return",
+			"game_version": "Game version",
+			"save_version": "Save version",
+			"file_size": "File size",
+			"data_size": "Uncompressed data",
+			"nodes": "Nodes"
+		},
+		"attribute": {
+			"strength": "Body",
+			"Strength": "Body",
+			"reflexes": "Reflexes",
+			"Reflexes": "Reflexes",
+			"technicalAbility": "Technical Ability",
+			"TechnicalAbility": "Technical Ability",
+			"intelligence": "Intelligence",
+			"Intelligence": "Intelligence",
+			"cool": "Cool",
+			"Cool": "Cool",
+			"Espionage": "Relic"
+		},
+		"skill": {
+			"StrengthSkill": "Solo",
+			"ReflexesSkill": "Shinobi",
+			"TechnicalAbilitySkill": "Engineer",
+			"IntelligenceSkill": "Netrunner",
+			"CoolSkill": "Headhunter"
+		},
+		"expansion": {
+			"EP1": "Phantom Liberty"
 		}
 	},
 	"skyrim": {
@@ -56,16 +132,114 @@
 			"quests_completed": "Quests completed",
 			"locations_discovered": "Locations discovered",
 			"dragon_souls": "Dragon souls"
+		},
+		"section": {
+			"character": {
+				"title": "Character",
+				"description": "Name, level, race, location and play time"
+			},
+			"stats": {
+				"title": "Statistics",
+				"description": "The general stats from the journal, by category"
+			},
+			"plugins": {
+				"title": "Plugins",
+				"description": "The plugins the save depends on, in load order"
+			},
+			"file": {
+				"title": "File",
+				"description": "Versions, compression and how much the save records"
+			}
+		},
+		"row": {
+			"name": "Name",
+			"level": "Level",
+			"experience": "{current} / {next} XP",
+			"race": "Race",
+			"sex": "Sex",
+			"location": "Location",
+			"play_time": "Play time",
+			"saved": "Saved",
+			"save_number": "Save number",
+			"light_plugins": "Light plugins",
+			"version": "Version",
+			"form_version": "Form version",
+			"compression": "Compression",
+			"data_size": "Uncompressed data",
+			"screenshot": "Screenshot",
+			"change_forms": "Changed records"
+		},
+		"sex": {
+			"Male": "Male",
+			"Female": "Female"
+		},
+		"stat_category": {
+			"General": "General",
+			"Quest": "Quests",
+			"Combat": "Combat",
+			"Magic": "Magic",
+			"Crafting": "Crafting",
+			"Crime": "Crime",
+			"DLC": "DLC"
 		}
 	},
 	"dinao": {
 		"playthrough": "{name} · {citizens}",
-		"citizens": { "one": "{count} citizen", "other": "{count} citizens" },
-		"kills": { "one": "{count} kill", "other": "{count} kills" },
+		"citizens": {
+			"one": "{count} citizen",
+			"other": "{count} citizens"
+		},
+		"kills": {
+			"one": "{count} kill",
+			"other": "{count} kills"
+		},
 		"detail": {
 			"buildings": "Buildings",
 			"difficulty": "Difficulty",
 			"save_version": "Save version"
+		},
+		"section": {
+			"session": {
+				"title": "Session",
+				"description": "The mission, map, difficulty and time played"
+			},
+			"resources": {
+				"title": "Resources",
+				"description": "How much of each resource there is, and how it changes each day"
+			},
+			"research": {
+				"title": "Research",
+				"description": "Buildings and research completed"
+			},
+			"entities": {
+				"title": "Entities",
+				"description": "How many of each kind of thing the save has"
+			}
+		},
+		"row": {
+			"mission": "Mission",
+			"map_seed": "Map seed",
+			"difficulty": "Difficulty",
+			"play_time": "Play time",
+			"game_time": "Game time",
+			"kills": "Enemies killed",
+			"save_version": "Save version",
+			"daily": "+{increase} / −{decrease} a day",
+			"current_research": "Current research",
+			"progress": "{progress} done",
+			"buildings": "Buildings",
+			"research": "Research"
+		},
+		"resource": {
+			"Food": "Food",
+			"Money": "Gold",
+			"Wood": "Wood",
+			"Stone": "Stone",
+			"Iron": "Iron",
+			"Souls": "Souls",
+			"Bones": "Bones",
+			"Spirit": "Spirit",
+			"DeathMetal": "Death metal"
 		}
 	},
 	"infraspace": {
@@ -76,6 +250,47 @@
 			"version": "Game version",
 			"map": "Map",
 			"research": "Research completed"
+		},
+		"section": {
+			"city": {
+				"title": "City",
+				"description": "The city level, goal, story and time played"
+			},
+			"resources": {
+				"title": "Resources",
+				"description": "Stored resources"
+			},
+			"research": {
+				"title": "Research",
+				"description": "Research done and upgrades bought"
+			},
+			"contents": {
+				"title": "Contents",
+				"description": "How many of each kind of thing the city has"
+			}
+		},
+		"row": {
+			"name": "Name",
+			"version": "Game version",
+			"map": "Map",
+			"saved": "Saved",
+			"play_time": "Play time",
+			"game_time": "Game time",
+			"city_level": "City level",
+			"habitat_level": "Average habitat level",
+			"immigrants": "Waiting immigrants",
+			"goal": "Goal",
+			"story": "Story messages",
+			"current_research": "Current research",
+			"researched": "Researched",
+			"upgrades": "Upgrades"
 		}
+	},
+	"inspector": {
+		"title": "Inspect {name}",
+		"overview": "Overview",
+		"contents": "Contents",
+		"loading": "Reading the save…",
+		"error": "Could not read this save"
 	}
 }

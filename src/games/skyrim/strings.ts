@@ -1,3 +1,4 @@
+import { text } from '../../i18n.js';
 import { array, primitive, struct, types as t, type InstanceOf } from 'memium';
 import { decodeUTF8 } from 'utilium';
 
@@ -23,4 +24,19 @@ export const FileTime = struct.packed('FileTime', {
 export function fileTimeToInstant(fileTime: InstanceOf<typeof FileTime>): Temporal.Instant {
 	const intervals = (BigInt(fileTime.high) << 32n) | BigInt(fileTime.low);
 	return Temporal.Instant.fromEpochNanoseconds(intervals * 100n - 11_644_473_600_000_000_000n);
+}
+
+/** Parses play time like `104.19.59` (hours, minutes and seconds), in seconds. */
+export function parsePlayTime(playTime: string): number {
+	const [hours = 0, minutes = 0, seconds = 0] = playTime.split('.').map(Number);
+	return hours * 3600 + minutes * 60 + seconds;
+}
+
+/** Turns a race's editor ID like `DarkElfRace` into a name like `Dark Elf`. */
+export function raceName(editorId: string): string {
+	const name = editorId
+		.replace('Race', ' ')
+		.replace(/([a-z])([A-Z])/g, '$1 $2')
+		.trim();
+	return text(`skyrim.race.${editorId}`, { $default: name });
 }

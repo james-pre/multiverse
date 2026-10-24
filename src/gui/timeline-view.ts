@@ -8,7 +8,8 @@ import * as Pango from '../../native/pango.js';
 import { layoutTimeline } from '../layout.js';
 import type { Timeline, TimelineNode } from '../timeline.js';
 import { Viewport, type Point } from '../viewport.js';
-import { escapeMarkup, hoursAndMinutes } from './format.js';
+import { hoursAndMinutes } from '../format.js';
+import { escapeMarkup } from './format.js';
 import { screenshotTexture } from './screenshots.js';
 
 const kindColors: Record<string, string> = {

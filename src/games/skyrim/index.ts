@@ -9,7 +9,7 @@ import { GlobalData, GlobalDataType } from './global-data.js';
 import { MiscStats } from './globals/index.js';
 import { inspector } from './inspect.js';
 import { SaveFile } from './save-file.js';
-import { fileTimeToInstant } from './strings.js';
+import { fileTimeToInstant, parsePlayTime, raceName } from './strings.js';
 import { FileLocationTable } from './structs.js';
 
 /** Save file names, e.g. `Save38_7C72702B_0_576F7A696D_Mzulft01_040819_20260321020854_54_1.ess` */
@@ -24,12 +24,6 @@ const kinds: Record<string, string> = {
 
 /** Misc stats that can go down, so they can't show which save came first. Faction quest counts are recounted for repeatable quests. */
 const unorderedStats = /Bounty$|^Favorite |^Horses Owned$|^(?!Quests Completed$).+ Quests Completed$/;
-
-/** Parses play time like `104.19.59` (hours, minutes and seconds), in seconds. */
-export function parsePlayTime(playTime: string): number {
-	const [hours = 0, minutes = 0, seconds = 0] = playTime.split('.').map(Number);
-	return hours * 3600 + minutes * 60 + seconds;
-}
 
 /** Reads the misc stats, which are at the start of the first global data table. */
 export function parseMiscStats(body: Uint8Array): Map<string, number> {
@@ -61,15 +55,6 @@ function readMiscStats(file: SaveFile): Map<string, number> {
 			if (body.length >= file.bodySize) throw error;
 		}
 	}
-}
-
-/** Turns a race's editor ID like `DarkElfRace` into a name like `Dark Elf`. */
-function raceName(editorId: string): string {
-	const name = editorId
-		.replace('Race', ' ')
-		.replace(/([a-z])([A-Z])/g, '$1 $2')
-		.trim();
-	return text(`skyrim.race.${editorId}`, { $default: name });
 }
 
 interface SaveInfo {

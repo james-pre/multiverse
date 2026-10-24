@@ -49,12 +49,15 @@ export function readContainer(path: string): SaveContainer {
 
 /** Whether a file starts like a save, without reading all of it */
 export function isSave(path: string): boolean {
-	const fd = openSync(savePath(path), 'r');
+	let fd: number | undefined;
 	try {
+		fd = openSync(savePath(path), 'r');
 		const start = new Uint8Array(1024);
 		const length = readSync(fd, start);
 		return start[0] == 0 && decodeUTF8(start.subarray(0, length)).includes('Utility.SaveContainer');
+	} catch {
+		return false;
 	} finally {
-		closeSync(fd);
+		if (fd !== undefined) closeSync(fd);
 	}
 }

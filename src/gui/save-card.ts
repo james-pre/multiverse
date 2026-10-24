@@ -4,7 +4,7 @@ import * as Pango from '../../native/pango.js';
 import type { Game } from '../games/index.js';
 import type { Save } from '../save.js';
 import { text } from '../i18n.js';
-import { hoursAndMinutes, shortDate } from './format.js';
+import { formatValue, hoursAndMinutes, shortDate } from '../format.js';
 import { screenshotTexture } from './screenshots.js';
 
 export interface CardAction {
@@ -12,11 +12,6 @@ export interface CardAction {
 	label: string;
 	isDestructive?: boolean;
 	canRun(save: Save): boolean;
-}
-
-function formatValue(value: string | number | boolean): string {
-	if (typeof value == 'boolean') return text(value ? 'common.yes' : 'common.no');
-	return String(value);
 }
 
 function label(cssClass?: string): Gtk.Label {

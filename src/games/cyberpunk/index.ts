@@ -1,29 +1,11 @@
 import * as io from 'ioium';
 import { existsSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import * as z from 'zod';
 import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';
 import type { Game } from '../index.js';
-
-const Metadata = z.object({
-	Data: z.object({
-		metadata: z.object({
-			name: z.string(),
-			playthroughID: z.string(),
-			playthroughTime: z.number(),
-			timestampString: z.string(),
-			trackedQuestEntry: z.string(),
-			finishedQuests: z.string(),
-			lifePath: z.string(),
-			level: z.number(),
-			streetCred: z.number(),
-			difficulty: z.string(),
-			buildPatch: z.string(),
-			isModded: z.boolean(),
-		}),
-	}),
-});
+import { inspector } from './inspect.js';
+import { describeObjective, findMetadata, lifePathName, Metadata, parseTimestamp } from './metadata.js';
 
 const kinds: Record<string, string> = {
 	ManualSave: 'manual',
@@ -33,40 +15,7 @@ const kinds: Record<string, string> = {
 	EndGameSave: 'end game',
 };
 
-/** Parses the game's `hh:mm:ss, d.mm.yyyy` timestamps, which are in the system's time zone. */
-export function parseTimestamp(timestamp: string): Temporal.ZonedDateTime {
-	const match = /^(\d+):(\d+):(\d+), (\d+)\.(\d+)\.(\d+)$/.exec(timestamp);
-	if (!match) throw new Error(`Invalid timestamp: ${timestamp}`);
-	const [hour, minute, second, day, month, year] = match.slice(1).map(Number);
-	return Temporal.PlainDateTime.from({ year, month, day, hour, minute, second }).toZonedDateTime(
-		Temporal.Now.timeZoneId()
-	);
-}
-
-/** Turns a quest entry path like `quests/meta/09_solo/404/01b_find_mikoshi` into `Find mikoshi`. */
-function describeObjective(entry: string): string {
-	const objective = entry.split('/').at(-1)!;
-	if (objective == '[nothing]') return '';
-	const text = objective.replace(/^\d+\w?_/, '').replaceAll('_', ' ');
-	return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-/** The newest metadata file in a save directory, since the game versions the file name. */
-function findMetadata(directory: string): string | undefined {
-	const versions = readdirSync(directory)
-		.map(file => /^metadata\.(\d+)\.json$/.exec(file))
-		.filter(match => !!match)
-		.toSorted((a, b) => Number(b[1]) - Number(a[1]));
-	return versions[0] && join(directory, versions[0][0]);
-}
-
-type Metadata = z.infer<typeof Metadata>['Data']['metadata'];
-
 const metadataOf = new WeakMap<Save, Metadata>();
-
-function lifePathName(lifePath: string): string {
-	return text(`cyberpunk.life_path.${lifePath}`, { $default: lifePath });
-}
 
 function readSave(directory: string): Save | undefined {
 	const metadataPath = findMetadata(directory);
@@ -138,6 +87,7 @@ export const cyberpunk: Game = {
 			run: convertToManual,
 		},
 	],
+	inspector,
 	scan(directory) {
 		const saves: Save[] = [];
 		for (const entry of readdirSync(directory, { withFileTypes: true })) {
