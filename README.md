@@ -8,6 +8,7 @@ Supported games:
 - The Elder Scrolls V: Skyrim Special Edition (Steam), including co-saves from the Skyrim Script Extender.
 - Diplomacy is Not an Option (Steam).
 - InfraSpace (Steam).
+- Plague Inc: Evolved (Steam).
 
 ## Installation
 

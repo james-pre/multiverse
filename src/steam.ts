@@ -129,7 +129,7 @@ const prefixProfile = /^.*\/steamapps\/compatdata\/\d+\/pfx\/drive_c\/users\/ste
 /** Steam Cloud folders for a game */
 const cloudFolder = /^.*[/\\]userdata[/\\]\d+[/\\]\d+[/\\]remote(?=[/\\]|$)/;
 
-/** Shortens a path in a Proton prefix's user profile to start with `S:`, and one in a Steam Cloud folder to start with `Steam Cloud:`. */
+/** Shortens a path in a Proton prefix's user profile to start with `S:`, and one in a Steam Cloud folder to start with `Steam Cloud`. */
 export function shortPath(path: string): string {
-	return path.replace(prefixProfile, 'S:').replace(cloudFolder, 'Steam Cloud:');
+	return path.replace(prefixProfile, 'S:').replace(cloudFolder, 'Steam Cloud');
 }

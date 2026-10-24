@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { suite, test } from 'node:test';
 import * as steam from '../src/steam.js';
 
@@ -45,5 +48,16 @@ suite('steam', () => {
 		assert.equal(steam.shortPath(`${prefix}/AppData/LocalLow/Game`), 'S:/AppData/LocalLow/Game');
 		assert.equal(steam.shortPath(prefix), 'S:');
 		assert.equal(steam.shortPath('/home/user/saves'), '/home/user/saves');
+	});
+	test('cloudDirectories finds the folder of each account, and shortPath shortens them', () => {
+		const root = mkdtempSync(join(tmpdir(), 'multiverse-'));
+		try {
+			mkdirSync(join(root, 'userdata/123/246620/remote'), { recursive: true });
+			const [found] = steam.cloudDirectories({ id: 246620, saves: '', cloud: true }, [root]);
+			assert.equal(found, join(root, 'userdata/123/246620/remote'));
+			assert.equal(steam.shortPath(found), 'Steam Cloud');
+		} finally {
+			rmSync(root, { recursive: true, force: true });
+		}
 	});
 });

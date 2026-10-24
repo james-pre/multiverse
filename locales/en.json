@@ -292,5 +292,57 @@
 		"contents": "Contents",
 		"loading": "Reading the save…",
 		"error": "Could not read this save"
+	},
+	"plague": {
+		"playthrough": "{name} · {type}",
+		"slot": "Slot {number}",
+		"day": "Day {day}",
+		"detail": {
+			"infected": "Infected",
+			"dead": "Dead",
+			"cure": "Cure"
+		},
+		"difficulty": {
+			"0": "Casual",
+			"1": "Normal",
+			"2": "Brutal",
+			"3": "Mega Brutal"
+		},
+		"section": {
+			"disease": {
+				"title": "Disease",
+				"description": "The disease, its evolved traits and how far it has spread over time"
+			},
+			"world": {
+				"title": "World",
+				"description": "How much of the world is infected and dead, and how close the cure is"
+			},
+			"countries": {
+				"title": "Countries",
+				"description": "Each country's infected and dead, most infected first"
+			}
+		},
+		"row": {
+			"name": "Name",
+			"type": "Type",
+			"difficulty": "Difficulty",
+			"mode": "Mode",
+			"scenario": "Scenario",
+			"started": "Started",
+			"day": "Day",
+			"play_time": "Play time",
+			"dna": "DNA points",
+			"traits": "Evolved traits",
+			"cheats": "Cheats used",
+			"population": "Population",
+			"infected": "Infected",
+			"dead": "Dead",
+			"healthy": "Healthy",
+			"cure": "Cure",
+			"infected_countries": "Infected countries",
+			"of": "{count} of {total}",
+			"won": "Won",
+			"country_dead": "{dead} dead of {population}"
+		}
 	}
 }
