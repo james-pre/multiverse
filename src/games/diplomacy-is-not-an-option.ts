@@ -93,7 +93,10 @@ export const diplomacyIsNotAnOption: Game = {
 		const mission = saves.findLast(save => save.label)?.label;
 		const named = saves.findLast(save => save.kind == 'manual')?.name;
 		const citizens = Math.max(...saves.map(save => containerOf.get(save)!.citizens.length));
-		return text('dinao.playthrough', { name: named ?? mission ?? saves.at(-1)!.name, citizens });
+		return text('dinao.playthrough', {
+			name: named ?? mission ?? saves.at(-1)!.name,
+			citizens: text('dinao.citizens', { count: citizens }),
+		});
 	},
 	actions: [],
 	scan(directory) {

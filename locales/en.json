@@ -4,7 +4,8 @@
 	},
 	"common": {
 		"yes": "Yes",
-		"no": "No"
+		"no": "No",
+		"saves": { "one": "{count} save", "other": "{count} saves" }
 	},
 	"play_time": "{hours}h {minutes}m",
 	"picker": {
@@ -13,7 +14,7 @@
 		"no_saves": "No saves found"
 	},
 	"sidebar": {
-		"subtitle": "{count} saves · {time}"
+		"subtitle": "{saves} · {time}"
 	},
 	"card": {
 		"empty": "Hover over a save to see its details",
@@ -58,9 +59,9 @@
 		}
 	},
 	"dinao": {
-		"playthrough": "{name} · {citizens} citizens",
-		"citizens": "{count} citizens",
-		"kills": "{count} kills",
+		"playthrough": "{name} · {citizens}",
+		"citizens": { "one": "{count} citizen", "other": "{count} citizens" },
+		"kills": { "one": "{count} kill", "other": "{count} kills" },
 		"detail": {
 			"buildings": "Buildings",
 			"difficulty": "Difficulty",

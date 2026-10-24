@@ -6,6 +6,7 @@ import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
 import { defaultDataDirectory, installEntry, uninstallEntry } from './desktop.js';
 import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
+import { text } from './i18n.js';
 import { Timeline } from './timeline.js';
 
 interface ScanOptions {
@@ -30,7 +31,7 @@ function locate(options: ScanOptions): SaveLocation[] {
 }
 
 function printTimeline(game: Game, timeline: Timeline): void {
-	io.log(styleText('bold', `${game.describe(timeline)} (${timeline.nodes.length} saves)`));
+	io.log(styleText('bold', `${game.describe(timeline)} (${text('common.saves', { count: timeline.nodes.length })})`));
 
 	for (const { node, isBranchStart, depth } of timeline.walk()) {
 		const { save } = node;

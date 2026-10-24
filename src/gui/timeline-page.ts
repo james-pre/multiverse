@@ -192,7 +192,7 @@ export class TimelinePage {
 			row.setTitle(this.game.describe(view.timeline));
 			row.setSubtitle(
 				text('sidebar.subtitle', {
-					count: view.timeline.nodes.length,
+					saves: text('common.saves', { count: view.timeline.nodes.length }),
 					time: shortDate(latest(view.timeline).time),
 				})
 			);
