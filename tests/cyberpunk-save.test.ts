@@ -9,7 +9,7 @@ import { typeName } from '../src/games/cyberpunk/package.js';
 import { SaveFile, unpackDateTime } from '../src/games/cyberpunk/save-file.js';
 import { literalBlock } from './lz4.test.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
+const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 class Writer {

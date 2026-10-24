@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { installEntry, uninstallEntry } from '../src/desktop.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
+const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 test('installEntry links the desktop entry and icon, and uninstallEntry removes them', () => {

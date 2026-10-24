@@ -9,7 +9,7 @@ import { parsePlayTime } from '../src/games/skyrim/strings.js';
 import { inspector } from '../src/games/skyrim/inspect.js';
 import { literalBlock } from './lz4.test.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
+const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 class Writer {

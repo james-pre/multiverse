@@ -4,7 +4,7 @@ import globals from 'globals';
 import { defineConfig } from 'eslint/config';
 
 export default defineConfig({
-	name: 'save-multiverse',
+	name: 'multiverse',
 	extends: [eslint.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
 	files: ['src/**/*.ts'],
 	languageOptions: {

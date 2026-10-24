@@ -11,23 +11,23 @@ Supported games:
 
 ## Installation
 
-Multiverse needs GTK 4 and libadwaita. Either download `save-multiverse-linux-x64` from the [latest release](https://github.com/james-pre/save-multiverse/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
+Multiverse needs GTK 4 and libadwaita. Either download `multiverse-linux-x64` from the [latest release](https://github.com/james-pre/multiverse/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
 
 ```sh
-sudo npm i -g @james-pre/save-multiverse --allow-scripts=@james-pre/save-multiverse
+sudo npm i -g @james-pre/multiverse --allow-scripts=@james-pre/multiverse
 ```
 
 npm only runs the install script, which adds a desktop entry and icon so Multiverse shows up in your launcher, if `--allow-scripts` covers the package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
 
-`save-multiverse install` and `save-multiverse uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
+`multiverse install` and `multiverse uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
 
 ## Usage
 
 ```sh
-save-multiverse                    # open the viewer, starting with a game picker
-save-multiverse --game cyberpunk   # open a game's timelines directly
-save-multiverse tree               # print the timelines of every game with saves
-save-multiverse inspect <save>     # show what is in a save file
+multiverse                    # open the viewer, starting with a game picker
+multiverse --game cyberpunk   # open a game's timelines directly
+multiverse tree               # print the timelines of every game with saves
+multiverse inspect <save>     # show what is in a save file
 ```
 
 Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else. `inspect` recognizes the game from the file, and takes the sections to show (by default all of them, e.g. `header plugins globals changes` for Skyrim). An unknown section lists the ones the game has. For Skyrim, `--decompressed <path>` writes the save's data without compression for other tools.
@@ -53,6 +53,6 @@ The viewer uses GTK 4 and libadwaita on Node through [girbind](https://github.co
 
 UI text is in `locales/`, using [`@james-pre/locales`](https://www.npmjs.com/package/@james-pre/locales). `build` and `lint` generate the types for its keys into `src/.locale.ts`.
 
-`npm run build:sea` builds `build/save-multiverse-linux-x64` with [xsea](https://github.com/james-pre/xsea).
+`npm run build:sea` builds `build/multiverse-linux-x64` with [xsea](https://github.com/james-pre/xsea).
 
 Releases are published to npm by CI, with the bindings prebuilt on Fedora, and the executable is attached to the GitHub release.

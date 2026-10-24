@@ -24,7 +24,7 @@ execFileSync('npm', ['ci', '--omit=dev', '--ignore-scripts', '--no-audit', '--no
 await buildApp({
 	root: app,
 	main: 'dist/main.js',
-	name: 'save-multiverse',
-	prefix: join(root, 'build/save-multiverse-'),
+	name: 'multiverse',
+	prefix: join(root, 'build/multiverse-'),
 	targets: ['linux-x64'],
 });

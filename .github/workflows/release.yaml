@@ -48,4 +48,4 @@ jobs:
             - name: Upload release assets
               env:
                   GH_TOKEN: ${{ github.token }}
-              run: gh release upload "${{ github.event.release.tag_name }}" build/save-multiverse-linux-x64 --clobber --repo "$GITHUB_REPOSITORY"
+              run: gh release upload "${{ github.event.release.tag_name }}" build/multiverse-linux-x64 --clobber --repo "$GITHUB_REPOSITORY"

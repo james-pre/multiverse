@@ -2,8 +2,8 @@
 Type=Application
 Name=Multiverse
 Comment=View game saves as branching timelines
-Exec=save-multiverse
-TryExec=save-multiverse
+Exec=multiverse
+TryExec=multiverse
 Icon=dev.jamespre.Multiverse
 Terminal=false
 Categories=Game;Utility;
