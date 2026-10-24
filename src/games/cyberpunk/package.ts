@@ -342,7 +342,9 @@ export class Package {
 			const layout = this.layouts.get(object)!;
 			const entries = new Uint8Array(fields.size * 8);
 			const values = [...fields].map(([, { type, value }]) => encodeNumber(numberTypes[type], value));
-			const valueOffsets = values.map((_, i) => values.slice(0, i).reduce((total, bytes) => total + bytes.length, 0));
+			const valueOffsets = values.map((_, i) =>
+				values.slice(0, i).reduce((total, bytes) => total + bytes.length, 0)
+			);
 			const entryView = new DataView(entries.buffer);
 			[...fields].forEach(([name, { type }], i) => {
 				entryView.setUint16(i * 8, nameIndex(name), true);

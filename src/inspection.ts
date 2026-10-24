@@ -129,7 +129,11 @@ export function* sectionLines(section: Section, rows: Row[]): Generator<string> 
 			const value = row.value === undefined ? '' : `: ${row.value}`;
 			const detail = row.detail ? ` (${row.detail})` : '';
 			const choices = row.edit?.choices ? `: ${row.edit.choices.map(choice => choice.label).join(', ')}` : '';
-			const edit = !row.edit ? '' : row.edit.safe ? ` [editable${choices}]` : ` [editable with --expert${choices}]`;
+			const edit = !row.edit
+				? ''
+				: row.edit.safe
+					? ` [editable${choices}]`
+					: ` [editable with --expert${choices}]`;
 			yield `${indent}${row.label}${value}${detail}${edit}`;
 			if (row.rows) yield* visit(row.rows, indent + '\t');
 		}

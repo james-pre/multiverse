@@ -55,7 +55,8 @@ export function parseEditValue(edit: Edit, input: string): EditValue {
 		const choice = edit.choices.find(
 			choice => choice.label.toLowerCase() == text.toLowerCase() || String(choice.value) == text
 		);
-		if (!choice) throw new TypeError(`${input} is not one of ${edit.choices.map(choice => choice.label).join(', ')}`);
+		if (!choice)
+			throw new TypeError(`${input} is not one of ${edit.choices.map(choice => choice.label).join(', ')}`);
 		return choice.value;
 	}
 	switch (typeof edit.value) {

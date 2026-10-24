@@ -57,7 +57,7 @@ interface Development extends Instance {
 
 const difficulties = ['Story', 'Easy', 'Hard', 'VeryHard'];
 
-const skills = ['StrengthSkill','ReflexesSkill', 'TechnicalAbilitySkill', 'IntelligenceSkill', 'CoolSkill'];
+const skills = ['StrengthSkill', 'ReflexesSkill', 'TechnicalAbilitySkill', 'IntelligenceSkill', 'CoolSkill'];
 
 /** A name from the game's data, localized when there is a translation */
 function gameName(group: string, name: string): string {

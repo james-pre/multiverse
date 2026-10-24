@@ -208,7 +208,8 @@ export class SaveFile {
 		const { data, nodes } = this.resized();
 		const chunkSize = Math.max(...this.chunks.map(chunk => chunk.size));
 		const count = Math.ceil(data.length / chunkSize);
-		if (this.chunkTableOffset + count * 12 > first.offset) throw new Error('The save has too much data for its chunk table');
+		if (this.chunkTableOffset + count * 12 > first.offset)
+			throw new Error('The save has too much data for its chunk table');
 
 		const prefix = new Uint8Array(this.file.subarray(0, first.offset));
 		const prefixView = new DataView(prefix.buffer);
@@ -238,7 +239,10 @@ export class SaveFile {
 		const last = this.chunks.at(-1)!;
 		const table = new Uint8Array(this.file.subarray(last.offset + last.compressedSize, -8));
 		const tableView = new DataView(table.buffer);
-		const tableStart = new DataView(this.file.buffer, this.file.byteOffset + this.file.length - 8).getUint32(0, true);
+		const tableStart = new DataView(this.file.buffer, this.file.byteOffset + this.file.length - 8).getUint32(
+			0,
+			true
+		);
 		const shift = tableStart - (last.offset + last.compressedSize);
 		nodes.forEach(({ offset, size }, i) => {
 			tableView.setUint32(this.nodeFields[i] + shift, offset, true);

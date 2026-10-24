@@ -208,9 +208,7 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 	}
 
 	protected get canEdit(): boolean {
-		return (
-			!!this.inspection?.write && (this.inSlot || !!this.inspector.copy) && this.save.inGame !== false
-		);
+		return !!this.inspection?.write && (this.inSlot || !!this.inspector.copy) && this.save.inGame !== false;
 	}
 
 	protected toast(title: string): void {
@@ -373,7 +371,9 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 			summary.setSelectable(true);
 			heading.append(
 				this.valueWidget(summary, entry.edit, value =>
-					typeof value == 'string' ? JSON.stringify(value) : (choiceLabel(entry.edit!, value) ?? String(value))
+					typeof value == 'string'
+						? JSON.stringify(value)
+						: (choiceLabel(entry.edit!, value) ?? String(value))
 				)
 			);
 			return heading;

@@ -47,7 +47,10 @@ class DinoInspection implements Inspection {
 		// The game falls back to a valid difficulty when the index is out of range.
 		const main = this.document.locations.edit(this.container, 'difficultyIndex', { safe: true, minimum: 0 });
 		const root = this.header?.root;
-		return main && linkedEdit(main, [nrbf.isInstance(root) ? this.header!.locations.edit(root, 'difficultyId') : undefined]);
+		return (
+			main
+			&& linkedEdit(main, [nrbf.isInstance(root) ? this.header!.locations.edit(root, 'difficultyId') : undefined])
+		);
 	}
 
 	protected session(): Row[] {
