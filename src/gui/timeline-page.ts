@@ -11,11 +11,23 @@ import { text } from '../i18n.js';
 import type { Save } from '../save.js';
 import { Timeline, type TimelineNode } from '../timeline.js';
 import type { Point } from '../viewport.js';
+import { shortDate } from './format.js';
 import { SaveCard, type CardAction } from './save-card.js';
 import { TimelineView } from './timeline-view.js';
 
 /** Delay before reloading after the save directory changes, in milliseconds */
 const reloadDelay = 1000;
+
+/** The most playthroughs shown as tabs, beyond which they are listed in a sidebar */
+const maxTabs = 4;
+
+/** The most recently made save of a timeline */
+function latest(timeline: Timeline): Save {
+	return timeline.nodes.reduce(
+		(latest, node) => (node.save.time.epochNanoseconds > latest.time.epochNanoseconds ? node.save : latest),
+		timeline.nodes[0].save
+	);
+}
 
 /** Shows the timelines of one game's playthroughs, with the hovered or selected save's details below them. */
 export class TimelinePage {
@@ -24,6 +36,8 @@ export class TimelinePage {
 	protected readonly header = new Adw.HeaderBar();
 	protected readonly switcher = new Adw.ViewSwitcher();
 	protected readonly title: Adw.WindowTitle;
+	protected readonly split = new Adw.OverlaySplitView();
+	protected readonly sidebar = new Gtk.ListBox();
 	protected readonly card: SaveCard;
 	protected readonly actions: CardAction[];
 	protected readonly menu = new Gio.Menu();
@@ -80,9 +94,24 @@ export class TimelinePage {
 		content.append(new Gtk.Separator(Gtk.Orientation.horizontal));
 		content.append(this.card.widget);
 
+		this.sidebar.addCssClass('navigation-sidebar');
+		connect(this.sidebar, 'row-selected', (_, row) => {
+			const view = row && this.views[row.getIndex()];
+			if (view) this.stack.setVisibleChild(view.widget);
+		});
+		connect(this.stack, 'notify::visible-child', () => {
+			this.updateTitle();
+			this.selectOnlySave();
+		});
+		const sidebarScroll = new Gtk.ScrolledWindow();
+		sidebarScroll.setPolicy(Gtk.PolicyType.never, Gtk.PolicyType.automatic);
+		sidebarScroll.setChild(this.sidebar);
+		this.split.setSidebar(sidebarScroll);
+		this.split.setContent(content);
+
 		const toolbar = new Adw.ToolbarView();
 		toolbar.addTopBar(this.header);
-		toolbar.setContent(content);
+		toolbar.setContent(this.split);
 		this.page = new Adw.NavigationPage(toolbar, game.name);
 		this.page.insertActionGroup('save', group);
 
@@ -113,7 +142,9 @@ export class TimelinePage {
 
 	/** Rescan the saves and update every timeline in place, keeping each one's zoom and the selection. */
 	public reload(): void {
-		const timelines = Timeline.fromSaves(this.game.scan(this.directory)).toSorted((a, b) => b.end - a.end);
+		const timelines = Timeline.fromSaves(this.game.scan(this.directory)).toSorted((a, b) =>
+			Temporal.ZonedDateTime.compare(latest(b).time, latest(a).time)
+		);
 		const previous = new Map(this.views.map(view => [view.timeline.playthrough, view]));
 
 		this.views = timelines.map(timeline => {
@@ -135,16 +166,50 @@ export class TimelinePage {
 		this.selected =
 			this.selected && this.views.map(view => view.timeline.find(this.selected!.id)?.save).find(Boolean);
 		this.card.show(this.selected);
+		this.updateSidebar();
 		this.updateTitle();
+		this.selectOnlySave();
 	}
 
-	/** Show tabs for switching between playthroughs, or just the game's name when there is only one. */
+	protected get visibleView(): TimelineView | undefined {
+		const visible = this.stack.getVisibleChild();
+		return this.views.find(view => view.widget === visible);
+	}
+
+	/** Select the save of a playthrough with only one, since there is nothing else to pick. */
+	protected selectOnlySave(): void {
+		const nodes = this.visibleView?.timeline.nodes ?? [];
+		if (nodes.length == 1) this.visibleView!.select(nodes[0]);
+	}
+
+	/** List the playthroughs in the sidebar, which is only shown when there are too many for tabs. */
+	protected updateSidebar(): void {
+		const visible = this.visibleView;
+		this.sidebar.removeAll();
+		for (const view of this.views) {
+			const row = new Adw.ActionRow();
+			row.setUseMarkup(false);
+			row.setTitle(this.game.describe(view.timeline));
+			row.setSubtitle(
+				text('sidebar.subtitle', {
+					count: view.timeline.nodes.length,
+					time: shortDate(latest(view.timeline).time),
+				})
+			);
+			this.sidebar.append(row);
+		}
+		const index = visible ? this.views.indexOf(visible) : 0;
+		this.sidebar.selectRow(this.sidebar.getRowAtIndex(Math.max(0, index)));
+		this.split.setShowSidebar(this.views.length > maxTabs);
+	}
+
+	/** Show tabs for switching between a few playthroughs, or the game's name and the current playthrough otherwise. */
 	protected updateTitle(): void {
-		if (this.views.length > 1) {
+		if (this.views.length > 1 && this.views.length <= maxTabs) {
 			this.header.setTitleWidget(this.switcher);
 			return;
 		}
-		const [view] = this.views;
+		const view = this.visibleView;
 		this.title.setSubtitle(view ? this.game.describe(view.timeline) : '');
 		this.header.setTitleWidget(this.title);
 	}

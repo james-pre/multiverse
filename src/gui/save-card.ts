@@ -86,6 +86,7 @@ export class SaveCard {
 		}
 
 		this.picture.setPaintable(screenshotTexture(save));
+		this.picture.setVisible(!!save.screenshot);
 		this.title.setLabel(save.label || save.name);
 		const separator = text('card.separator');
 		this.summary.setLabel([hoursAndMinutes(save.playTime), ...save.highlights].join(separator));

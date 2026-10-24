@@ -93,11 +93,12 @@ export class Viewport {
 		this.clamp();
 	}
 
-	/** Keep the timeline's ends from scrolling past the edges. */
+	/** Keep the timeline's ends from scrolling past the edges, centering timelines narrower than the area. */
 	protected clamp(): void {
 		const { start, end } = this.layout.timeline;
 		const visible = (this.width - 2 * this.padding) / this.scale;
-		this.left = Math.min(Math.max(this.left, start), Math.max(start, end - visible));
+		this.left =
+			end - start < visible ? (start + end - visible) / 2 : Math.min(Math.max(this.left, start), end - visible);
 	}
 
 	/** The node drawn at a pixel position, if any. */

@@ -134,13 +134,17 @@ export class TimelineView {
 				if (node) this.onContextMenu?.(node, { x, y });
 				return;
 			}
-			if (!node || node === this.selected) return;
-			this.selected = node;
-			this.onSelect?.(node);
-			this.render();
+			if (node) this.select(node);
 		});
 
 		for (const controller of [motion, scroll, drag, click]) this.widget.addController(controller);
+	}
+
+	public select(node: TimelineNode): void {
+		if (node === this.selected) return;
+		this.selected = node;
+		this.onSelect?.(node);
+		this.render();
 	}
 
 	/** Show an updated version of the timeline, keeping the zoom, hover and selection. */
