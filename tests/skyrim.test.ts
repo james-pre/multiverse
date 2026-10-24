@@ -7,7 +7,7 @@ import { encodeUTF8 } from 'utilium';
 import { skyrim } from '../src/games/skyrim/index.js';
 import { parsePlayTime } from '../src/games/skyrim/strings.js';
 import { inspector } from '../src/games/skyrim/inspect.js';
-import { literalBlock } from './lz4.test.js';
+import { literalBlock } from './compression.test.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

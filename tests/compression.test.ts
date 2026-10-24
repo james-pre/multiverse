@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { encodeUTF8, decodeUTF8 } from 'utilium';
-import { decompressLZ4 } from '../src/compression.js';
+import { decompressLZ4, decompressLzf } from '../src/compression.js';
 
 /** An LZ4 block that stores all of `data` as literals */
 export function literalBlock(data: Uint8Array): Uint8Array {
@@ -33,5 +33,32 @@ suite('lz4', () => {
 
 	test('rejects matches before the start', () => {
 		assert.throws(() => decompressLZ4(new Uint8Array([0x10, 0x61, 9, 0]), 10));
+	});
+});
+
+/** LZF data that stores all of `data` as literals */
+export function literalLzf(data: Uint8Array): Uint8Array {
+	const output: number[] = [];
+	for (let start = 0; start < data.length; start += 32) {
+		const run = data.subarray(start, start + 32);
+		output.push(run.length - 1, ...run);
+	}
+	return new Uint8Array(output);
+}
+
+suite('lzf', () => {
+	test('decompresses literals', () => {
+		const data = encodeUTF8('y'.repeat(100));
+		assert.equal(decodeUTF8(decompressLzf(literalLzf(data))), 'y'.repeat(100));
+	});
+
+	test('decompresses overlapping back references', () => {
+		// "abc", then a reference 3 bytes back for 1 + 2 bytes, then one for 7 + 2 + 3 bytes.
+		const data = new Uint8Array([2, ...encodeUTF8('abc'), 0x20, 2, 0xe0, 3, 2]);
+		assert.equal(decodeUTF8(decompressLzf(data)), 'abc' + 'abc' + 'abcabcabcabc');
+	});
+
+	test('rejects references before the start', () => {
+		assert.throws(() => decompressLzf(new Uint8Array([0, 0x61, 0x20, 9])));
 	});
 });
