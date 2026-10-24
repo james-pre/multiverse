@@ -17,9 +17,7 @@ function abbreviate(path: string): string {
 }
 
 /** Lists the supported games and where their saves are, so one can be opened. */
-export class GamePicker {
-	public readonly page: Adw.NavigationPage;
-
+export class GamePicker extends Adw.NavigationPage {
 	public constructor(onOpen: (location: SaveLocation) => void) {
 		const group = new Adw.PreferencesGroup();
 		group.setTitle(text('picker.title'));
@@ -49,6 +47,6 @@ export class GamePicker {
 		const toolbar = new Adw.ToolbarView();
 		toolbar.addTopBar(header);
 		toolbar.setContent(preferences);
-		this.page = new Adw.NavigationPage(toolbar, text('app.title'));
+		super({ child: toolbar, title: text('app.title') });
 	}
 }

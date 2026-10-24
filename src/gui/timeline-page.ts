@@ -100,7 +100,7 @@ export class TimelinePage {
 		this.stack.setVexpand(true);
 		content.append(this.stack);
 		content.append(new Gtk.Separator(Gtk.Orientation.horizontal));
-		content.append(this.card.widget);
+		content.append(this.card);
 
 		this.sidebar.addCssClass('navigation-sidebar');
 		connect(this.sidebar, 'row-selected', (_, row) => {
@@ -202,7 +202,7 @@ export class TimelinePage {
 		this.hovered = undefined;
 		this.selected =
 			this.selected && this.views.map(view => view.timeline.find(this.selected!.id)?.save).find(Boolean);
-		this.card.show(this.selected);
+		this.card.showSave(this.selected);
 		this.updateSidebar();
 		this.updateTitle();
 		this.selectOnlySave();
@@ -262,11 +262,11 @@ export class TimelinePage {
 
 		view.onHover = node => {
 			this.hovered = node?.save;
-			this.card.show(this.hovered ?? this.selected);
+			this.card.showSave(this.hovered ?? this.selected);
 		};
 		view.onSelect = node => {
 			this.selected = node?.save;
-			this.card.show(this.hovered ?? this.selected);
+			this.card.showSave(this.hovered ?? this.selected);
 		};
 
 		const popover = Gtk.PopoverMenu.newFromModelFull(this.menu, Gtk.PopoverMenuFlags.nested);
@@ -310,7 +310,7 @@ export class TimelinePage {
 			this.reload();
 		} catch (error) {
 			this.toast(io.errorText(error));
-			this.card.show(this.hovered ?? this.selected);
+			this.card.showSave(this.hovered ?? this.selected);
 		}
 	}
 

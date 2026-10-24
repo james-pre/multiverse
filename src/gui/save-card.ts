@@ -26,8 +26,7 @@ function label(cssClass?: string): Gtk.Label {
 }
 
 /** Shows the hovered or selected save like a row in the game's save list, with buttons for its actions. */
-export class SaveCard {
-	public readonly widget = new Gtk.Stack();
+export class SaveCard extends Gtk.Stack {
 	public onAction?: (id: string, save: Save) => void;
 	/** Called when the save is put in or removed from the game with the card's switch */
 	public onToggleInGame?: (save: Save, inGame: boolean) => void;
@@ -48,9 +47,10 @@ export class SaveCard {
 		protected readonly game: Game,
 		actions: CardAction[]
 	) {
+		super();
 		const empty = new Gtk.Label(text('card.empty'));
 		empty.addCssClass('dim-label');
-		this.widget.addNamed(empty, 'empty');
+		this.addNamed(empty, 'empty');
 
 		this.picture.setSizeRequest(192, 108);
 		this.picture.setContentFit(Gtk.ContentFit.cover);
@@ -91,18 +91,18 @@ export class SaveCard {
 		thumbnail.setTighteningThreshold(192);
 		thumbnail.setChild(this.picture);
 		for (const widget of [thumbnail, info, buttons]) row.append(widget);
-		this.widget.addNamed(row, 'save');
+		this.addNamed(row, 'save');
 
-		this.widget.setMarginTop(12);
-		this.widget.setMarginBottom(12);
-		this.widget.setMarginStart(12);
-		this.widget.setMarginEnd(12);
+		this.setMarginTop(12);
+		this.setMarginBottom(12);
+		this.setMarginStart(12);
+		this.setMarginEnd(12);
 	}
 
-	public show(save: Save | undefined): void {
+	public showSave(save: Save | undefined): void {
 		this.save = save;
 		if (!save) {
-			this.widget.setVisibleChildName('empty');
+			this.setVisibleChildName('empty');
 			return;
 		}
 
@@ -125,6 +125,6 @@ export class SaveCard {
 		this.inGameSwitch.setActive(!!save.inGame);
 		this.inGameSwitch.setState(!!save.inGame);
 		this.updating = false;
-		this.widget.setVisibleChildName('save');
+		this.setVisibleChildName('save');
 	}
 }

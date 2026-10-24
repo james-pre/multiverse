@@ -18,7 +18,7 @@ export class MainWindow extends Adw.ApplicationWindow {
 		this.setTitle(text('app.title'));
 		this.setDefaultSize(1280, 720);
 
-		this.navigation.add(new GamePicker(location => this.open(location)).page);
+		this.navigation.add(new GamePicker(location => this.open(location)));
 		this.toasts.setChild(this.navigation);
 		this.setContent(this.toasts);
 
