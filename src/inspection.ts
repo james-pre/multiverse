@@ -37,6 +37,7 @@ export interface Inspection {
 	/**
 	 * Writes the save with its changes to `path`, which is the save's own path or a copy's from `Inspector.copy`.
 	 * Inspections whose values can be changed have this.
+	 * For games whose saves can be archived, the written save has a new `Save.id`, so the archive tells it apart from the original.
 	 */
 	write?(path: string): void;
 }

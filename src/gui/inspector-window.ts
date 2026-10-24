@@ -152,7 +152,7 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 	protected readonly stale = new Set<View>();
 	protected readonly expertSwitch = new Gtk.Switch();
 	protected readonly expertBox = new Gtk.Box(Gtk.Orientation.horizontal, 8);
-	protected readonly saveButton = new Adw.SplitButton();
+	protected saveButton!: Gtk.Widget;
 	protected inspection?: Inspection;
 	protected building: View = 'overview';
 	protected expert = false;
@@ -202,8 +202,15 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 		});
 	}
 
+	/** Whether changes are written in the save's slot once it is archived, rather than to a copy */
+	protected get inSlot(): boolean {
+		return !!this.archive?.hasSlots;
+	}
+
 	protected get canEdit(): boolean {
-		return !!this.inspection?.write && !!this.inspector.copy && this.save.inGame !== false;
+		return (
+			!!this.inspection?.write && (this.inSlot || !!this.inspector.copy) && this.save.inGame !== false
+		);
 	}
 
 	protected toast(title: string): void {
@@ -224,22 +231,33 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 		return this.expertBox;
 	}
 
+	/** A button that saves to a copy, with overwriting the original in its menu, or that saves in the slot */
 	protected saveMenu(): Gtk.Widget {
-		const menu = new Gio.Menu();
-		menu.append(text('editor.overwrite'), 'inspector.overwrite');
-		const actions = new Gio.SimpleActionGroup();
-		const overwrite = new Gio.SimpleAction('overwrite', null);
-		connect(overwrite, 'activate', () => this.confirmSave(true));
-		actions.addAction(overwrite);
-		this.insertActionGroup('inspector', actions);
+		let button: Gtk.Widget;
+		if (this.inSlot) {
+			const save = Gtk.Button.newWithLabel(text('editor.save'));
+			connect(save, 'clicked', () => this.confirmSave(false));
+			button = save;
+		} else {
+			const menu = new Gio.Menu();
+			menu.append(text('editor.overwrite'), 'inspector.overwrite');
+			const actions = new Gio.SimpleActionGroup();
+			const overwrite = new Gio.SimpleAction('overwrite', null);
+			connect(overwrite, 'activate', () => this.confirmSave(true));
+			actions.addAction(overwrite);
+			this.insertActionGroup('inspector', actions);
+			const split = new Adw.SplitButton();
+			split.setLabel(text('editor.save_copy'));
+			split.setMenuModel(menu);
+			connect(split, 'clicked', () => this.confirmSave(false));
+			button = split;
+		}
 
-		this.saveButton.setLabel(text('editor.save_copy'));
-		this.saveButton.setMenuModel(menu);
-		this.saveButton.addCssClass('suggested-action');
-		this.saveButton.setSensitive(false);
-		this.saveButton.setVisible(false);
-		connect(this.saveButton, 'clicked', () => this.confirmSave(false));
-		return this.saveButton;
+		button.addCssClass('suggested-action');
+		button.setSensitive(false);
+		button.setVisible(false);
+		this.saveButton = button;
+		return button;
 	}
 
 	protected load(): void {
@@ -446,12 +464,17 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 		const name = this.save.label || this.save.name;
 		const dialog = new Adw.AlertDialog(
 			text('editor.warning.heading'),
-			overwrite
-				? text(this.archive ? 'editor.warning.overwrite_archived' : 'editor.warning.overwrite', { name })
-				: text('editor.warning.copy', { name })
+			this.inSlot
+				? text('editor.warning.slot', { name })
+				: overwrite
+					? text(this.archive ? 'editor.warning.overwrite_archived' : 'editor.warning.overwrite', { name })
+					: text('editor.warning.copy', { name })
 		);
 		dialog.addResponse('cancel', text('editor.warning.cancel'));
-		dialog.addResponse('save', text(overwrite ? 'editor.overwrite' : 'editor.save_copy'));
+		dialog.addResponse(
+			'save',
+			text(this.inSlot ? 'editor.save' : overwrite ? 'editor.overwrite' : 'editor.save_copy')
+		);
 		dialog.setResponseAppearance(
 			'save',
 			overwrite ? Adw.ResponseAppearance.destructive : Adw.ResponseAppearance.suggested
@@ -464,16 +487,21 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 		dialog.present(this);
 	}
 
-	/** Write the changes to this window's copy of the save, making it first, or over the original */
+	/** Write the changes to this window's copy of the save, making it first, or over the original once it is archived */
 	protected write(overwrite: boolean): void {
 		try {
-			if (overwrite) this.archive?.add(this.save);
-			const target = overwrite ? this.save.path : (this.copyPath ??= this.inspector.copy!(this.save.path));
+			const inPlace = overwrite || this.inSlot;
+			if (inPlace) this.archive?.add(this.save);
+			const target = inPlace ? this.save.path : (this.copyPath ??= this.inspector.copy!(this.save.path));
 			this.inspection!.write!(target);
 			this.hasChanges = false;
 			this.saveButton.setSensitive(false);
 			this.toast(
-				overwrite ? text('editor.saved_original') : text('editor.saved_copy', { name: basename(target) })
+				this.inSlot
+					? text('editor.saved_slot')
+					: overwrite
+						? text('editor.saved_original')
+						: text('editor.saved_copy', { name: basename(target) })
 			);
 		} catch (error) {
 			this.toast(io.errorText(error));

@@ -30,7 +30,8 @@ export interface Inspector {
 	decompress?(path: string): Uint8Array;
 	/**
 	 * Copies a save so the game lists the copy as another save, returning the copy's path.
-	 * Inspectors whose inspections can write saves have this.
+	 * Inspectors whose inspections can write saves have this, except for games with fixed slots,
+	 * whose changes are written in the save's slot once the original is archived.
 	 */
 	copy?(path: string): string;
 }

@@ -11,7 +11,7 @@ import {
 	watch,
 	writeFileSync,
 } from 'node:fs';
-import { isAbsolute, join, relative, sep } from 'node:path';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import type { Game, SaveLocation } from './games/index.js';
 import { dataDirectory } from './paths.js';
 import type { Save } from './save.js';
@@ -52,6 +52,16 @@ export class Archive {
 	) {
 		this.game = location.game;
 		if (!this.game.archive) throw new Error(`${this.game.name} saves can not be archived`);
+	}
+
+	/** Whether the game has a fixed number of slots, so changes to a save are written in its slot once it is archived */
+	public get hasSlots(): boolean {
+		return 'slots' in this.game.archive!;
+	}
+
+	/** The save at a path in the game's save directory */
+	public find(path: string): Save | undefined {
+		return this.live().find(save => resolve(save.path) == resolve(path));
 	}
 
 	/** Copies in the archive, by the name of their folder */
@@ -102,7 +112,7 @@ export class Archive {
 			}
 		}
 
-		if (!('slots' in this.game.archive!)) return saves;
+		if (!this.hasSlots) return saves;
 		const occupied = new Set(saves.filter(save => save.inGame).map(save => save.slot));
 		for (const save of saves) if (occupied.has(save.slot)) save.playthrough = `slot:${save.slot}`;
 		return saves;

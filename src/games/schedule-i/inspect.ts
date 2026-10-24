@@ -1,12 +1,12 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, relative } from 'node:path';
-import { copySave, type Edit, type EditOptions } from '../../editing.js';
+import { basename, join, relative } from 'node:path';
+import type { Edit, EditOptions } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
 import { JsonDocument } from '../../json.js';
 import type { Inspector } from '../index.js';
-import { money, rankName, slots } from './names.js';
+import { money, rankName } from './names.js';
 import { readSaveFolder } from './save-file.js';
 
 const sections = {
@@ -155,7 +155,25 @@ class ScheduleInspection implements Inspection {
 		};
 	}
 
+	/** Marks the save as last played now, as the game does when it saves, so the archive tells it apart from the save before the changes */
+	protected touch(): void {
+		const document = this.document('Metadata.json');
+		const date = (document?.value as { LastPlayedDate?: Record<string, number> } | undefined)?.LastPlayedDate;
+		if (!document || !date) return;
+		const now = Temporal.Now.plainDateTimeISO();
+		const fields = {
+			Year: now.year,
+			Month: now.month,
+			Day: now.day,
+			Hour: now.hour,
+			Minute: now.minute,
+			Second: now.second,
+		};
+		for (const [key, value] of Object.entries(fields)) document.edit(date, key)?.set(value);
+	}
+
 	public write(path: string): void {
+		if (this.documents.values().some(document => document.changed)) this.touch();
 		for (const [name, document] of this.documents) {
 			if (document.changed) writeFileSync(join(path, name), document.toString());
 		}
@@ -166,12 +184,4 @@ export const inspector: Inspector = {
 	sections,
 	recognizes: path => /^SaveGame_\d+$/.test(basename(path)) && existsSync(join(path, 'Game.json')),
 	open: path => new ScheduleInspection(path),
-	copy(path) {
-		const directory = dirname(path);
-		const slot = slots.find(slot => !existsSync(join(directory, slot)));
-		if (!slot) throw new Error(text('schedule.no_free_slot'));
-		const target = join(directory, slot);
-		copySave(path, target);
-		return target;
-	},
 };

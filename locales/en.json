@@ -407,7 +407,6 @@
 			"quests": "Quests completed",
 			"version": "Version"
 		},
-		"no_free_slot": "Every save slot has a save in it. Delete or archive one to make a copy.",
 		"section": {
 			"organisation": {
 				"title": "Organisation",
@@ -463,17 +462,20 @@
 	"editor": {
 		"expert": "Expert Mode",
 		"expert_tooltip": "Allow changing any value, which is more likely to break the save",
+		"save": "Save",
 		"save_copy": "Save Copy",
 		"overwrite": "Overwrite Original",
 		"saved_copy": "Saved the changes to {name}",
 		"saved_original": "Saved the changes over the original",
+		"saved_slot": "Saved the changes. The original is in the archive.",
 		"archived": "This save is only in the archive. Put it in the game to edit it.",
 		"warning": {
 			"heading": "Save Changes?",
 			"copy": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes go to a copy, so “{name}” stays as it is.",
 			"overwrite": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes replace “{name}”, which can't be undone.",
 			"overwrite_archived": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes replace “{name}”, which is archived first.",
-			"cancel": "Cancel"
+			"cancel": "Cancel",
+			"slot": "Editing a save can corrupt it, or break the game in ways that only show up later. “{name}” is archived first, then the changes are written in its slot."
 		},
 		"discard": {
 			"heading": "Discard Changes?",

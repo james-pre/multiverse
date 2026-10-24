@@ -2,6 +2,7 @@ import { configCommand } from '@james-pre/config/cli';
 import { Command, Option } from 'commander';
 import * as io from 'ioium/node';
 import { writeFileSync } from 'node:fs';
+import { dirname, resolve, sep } from 'node:path';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
@@ -39,6 +40,13 @@ function locate(options: ScanOptions): SaveLocation[] {
 /** The saves at a location, including archived ones for games whose saves can be archived */
 function scan({ game, directory }: SaveLocation): Save[] {
 	return game.archive ? new Archive({ game, directory }).scan() : game.scan(directory);
+}
+
+/** The save directory a save is in, which is where the game looks for it */
+function saveDirectory(game: Game, path: string): string {
+	const absolute = resolve(path);
+	const found = findSaveDirectories(game).find(directory => absolute.startsWith(resolve(directory) + sep));
+	return found ?? dirname(absolute);
 }
 
 /** Finds a row by its section and the labels of it and the rows it is under, like `character/Unspent points/Attribute points` */
@@ -144,7 +152,9 @@ cli.command('inspect')
 
 		const inspection = inspector.open(path);
 		if (options.set) {
-			if (!inspection.write || !inspector.copy) io.exit(`${game.name} saves can not be changed`);
+			const archive = game.archive && new Archive({ game, directory: saveDirectory(game, path) });
+			if (!inspection.write || !(archive?.hasSlots || inspector.copy))
+				io.exit(`${game.name} saves can not be changed`);
 			for (const change of options.set) {
 				const separator = change.indexOf('=');
 				if (separator == -1) io.exit(`Expected a change like section/Row=value, not ${change}`);
@@ -154,7 +164,13 @@ cli.command('inspect')
 				row.edit.set(parseEditValue(row.edit, change.slice(separator + 1)));
 			}
 			io.warn('Editing a save can corrupt it, or break the game in ways that only show up later.');
-			const target = options.inPlace ? path : inspector.copy(path);
+			const inPlace = options.inPlace || archive?.hasSlots;
+			const save = inPlace ? archive?.find(path) : undefined;
+			if (archive && save) {
+				archive.add(save);
+				io.log('Archived the original to', save.archived);
+			}
+			const target = inPlace ? path : inspector.copy!(path);
 			inspection.write(target);
 			io.log('Saved the changes to', target);
 			return;
