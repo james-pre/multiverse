@@ -6,7 +6,8 @@ import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
 import { plagueInc } from '../src/games/plague-inc/index.js';
 import { inspector } from '../src/games/plague-inc/inspect.js';
-import { decodeValue, ticksToDateTime } from '../src/games/plague-inc/save-file.js';
+import { ticksToDateTime } from '../src/dotnet.js';
+import { decodeValue } from '../src/games/plague-inc/save-file.js';
 import { Timeline } from '../src/timeline.js';
 import { literalLzf } from './compression.test.js';
 

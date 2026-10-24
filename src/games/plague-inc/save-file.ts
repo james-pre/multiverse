@@ -41,16 +41,6 @@ export function nested(fields: Fields, name: string): Fields {
 	return value === undefined ? {} : parseFields(decodeValue(value));
 }
 
-/** .NET counts time in 100 nanosecond ticks since the start of year 1 */
-const ticksAtUnixEpoch = 621_355_968_000_000_000n;
-
-/** Converts ticks of local time, which the game saves its start time in */
-export function ticksToDateTime(ticks: bigint): Temporal.PlainDateTime {
-	return Temporal.Instant.fromEpochNanoseconds((ticks - ticksAtUnixEpoch) * 100n)
-		.toZonedDateTimeISO('UTC')
-		.toPlainDateTime();
-}
-
 /** A save: base64 of LZF-compressed fields, whose values are base64 of more fields */
 export interface SaveFile {
 	fields: Fields;
