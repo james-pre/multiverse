@@ -5,6 +5,7 @@ import type { Game } from '../games/index.js';
 import type { Save } from '../save.js';
 import { text } from '../i18n.js';
 import { hoursAndMinutes, shortDate } from './format.js';
+import { screenshotTexture } from './screenshots.js';
 
 export interface CardAction {
 	id: string;
@@ -84,7 +85,7 @@ export class SaveCard {
 			return;
 		}
 
-		this.picture.setFilename(save.screenshot ?? null);
+		this.picture.setPaintable(screenshotTexture(save));
 		this.title.setLabel(save.label || save.name);
 		const separator = text('card.separator');
 		this.summary.setLabel([hoursAndMinutes(save.playTime), ...save.highlights].join(separator));

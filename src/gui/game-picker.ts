@@ -33,7 +33,7 @@ export class GamePicker {
 				row.addSuffix(Gtk.Image.newFromIconName('go-next-symbolic'));
 				connect(row, 'activated', () => onOpen({ game, directory }));
 			}
-			group.add(row as unknown as Gtk.Widget);
+			group.add(row);
 		}
 
 		const preferences = new Adw.PreferencesPage();
@@ -41,7 +41,7 @@ export class GamePicker {
 
 		const toolbar = new Adw.ToolbarView();
 		toolbar.addTopBar(new Adw.HeaderBar());
-		toolbar.setContent(preferences as unknown as Gtk.Widget);
+		toolbar.setContent(preferences);
 		this.page = new Adw.NavigationPage(toolbar, text('app.title'));
 	}
 }

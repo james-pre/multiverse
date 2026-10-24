@@ -26,6 +26,16 @@ function isSubset(subset: ReadonlySet<string>, superset: ReadonlySet<string>): b
 	return true;
 }
 
+/** Whether `ancestor` could have come before `save`, given that progress only accumulates. */
+function isProgressBefore(ancestor: Save, save: Save): boolean {
+	if (!isSubset(ancestor.progress, save.progress)) return false;
+	for (const [name, count] of Object.entries(ancestor.counters ?? {})) {
+		const later = save.counters?.[name];
+		if (later !== undefined && count > later) return false;
+	}
+	return true;
+}
+
 /** Wall-clock time between two saves that play time doesn't account for, in seconds. */
 export function unaccountedTime(ancestor: Save, save: Save): number {
 	const wallTime = ancestor.time.until(save.time).total('seconds');
@@ -44,7 +54,7 @@ export function findParent(save: Save, candidates: Iterable<Save>, options: Infe
 
 	for (const candidate of candidates) {
 		if (candidate === save || candidate.playTime >= save.playTime) continue;
-		if (!isSubset(candidate.progress, save.progress)) continue;
+		if (!isProgressBefore(candidate, save)) continue;
 
 		const gap = unaccountedTime(candidate, save);
 		if (gap < -tolerance) continue;

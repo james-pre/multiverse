@@ -1,6 +1,7 @@
 import { connect, disconnect } from 'girbind';
 import * as io from 'ioium';
-import { watch, type FSWatcher } from 'node:fs';
+import { statSync, watch, type FSWatcher } from 'node:fs';
+import { dirname } from 'node:path';
 import * as Adw from '../../native/adw.js';
 import * as Gdk from '../../native/gdk.js';
 import * as Gio from '../../native/gio.js';
@@ -191,7 +192,8 @@ export class TimelinePage {
 		if (id == 'delete') return this.confirmDelete(save);
 		try {
 			if (id == 'open') {
-				Gio.AppInfo.launchDefaultForUri(Gio.File.newForPath(save.path).getUri(), null);
+				const folder = statSync(save.path).isDirectory() ? save.path : dirname(save.path);
+				Gio.AppInfo.launchDefaultForUri(Gio.File.newForPath(folder).getUri(), null);
 				return;
 			}
 			const action = this.game.actions.find(action => action.id == id);
@@ -217,7 +219,7 @@ export class TimelinePage {
 		connect(dialog, 'response', (_, response) => {
 			if (response != 'delete') return;
 			try {
-				Gio.File.newForPath(save.path).trash(null);
+				for (const path of [save.path, ...(save.companions ?? [])]) Gio.File.newForPath(path).trash(null);
 				this.toast(text('delete.done', { name: save.name }));
 				if (this.selected === save) this.selected = undefined;
 				this.reload();

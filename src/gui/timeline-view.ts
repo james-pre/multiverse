@@ -9,6 +9,7 @@ import { layoutTimeline } from '../layout.js';
 import type { Timeline, TimelineNode } from '../timeline.js';
 import { Viewport, type Point } from '../viewport.js';
 import { escapeMarkup, hoursAndMinutes } from './format.js';
+import { screenshotTexture } from './screenshots.js';
 
 const kindColors: Record<string, string> = {
 	manual: '#3584e4',
@@ -24,7 +25,6 @@ const pangoScale = 1024;
 const card = {
 	width: 240,
 	padding: 8,
-	imageHeight: 135,
 	textHeight: 40,
 	radius: 12,
 	offset: 16,
@@ -86,7 +86,6 @@ export class TimelineView {
 
 	protected pointer: Point = { x: 0, y: 0 };
 	protected dragged = 0;
-	protected screenshots = new Map<string, Gdk.Texture | null>();
 
 	public constructor(public timeline: Timeline) {
 		this.viewport = new Viewport(layoutTimeline(timeline));
@@ -221,27 +220,16 @@ export class TimelineView {
 		snapshot.appendStroke(ring.toPath(), new Gsk.Stroke(2), colors.accent);
 	}
 
-	protected screenshot(path: string | undefined): Gdk.Texture | null {
-		if (!path) return null;
-		if (!this.screenshots.has(path)) {
-			try {
-				this.screenshots.set(path, Gdk.Texture.newFromFilename(path));
-			} catch {
-				this.screenshots.set(path, null);
-			}
-		}
-		return this.screenshots.get(path)!;
-	}
-
 	/** Draws a card with the save's screenshot next to the node, kept inside the view. */
 	protected drawCard(snapshot: Gtk.Snapshot, node: TimelineNode, colors: Palette): void {
 		const { save } = node;
 		const { width, height } = this.viewport;
 		const position = this.viewport.position(node);
-		const texture = this.screenshot(save.screenshot);
-
-		const imageHeight = texture ? card.imageHeight + card.padding : 0;
-		const cardHeight = card.padding * 2 + imageHeight + card.textHeight;
+		const texture = screenshotTexture(save);
+		const inner = card.width - card.padding * 2;
+		const imageHeight = texture ? Math.round((inner * texture.getHeight()) / texture.getWidth()) : 0;
+		const imageArea = texture ? imageHeight + card.padding : 0;
+		const cardHeight = card.padding * 2 + imageArea + card.textHeight;
 		const fitsRight = position.x + card.offset + card.width <= width - card.padding;
 		const x = fitsRight ? position.x + card.offset : position.x - card.offset - card.width;
 		const y = Math.max(card.padding, Math.min(position.y - cardHeight / 2, height - cardHeight - card.padding));
@@ -252,9 +240,8 @@ export class TimelineView {
 		snapshot.appendColor(colors.card, bounds);
 		snapshot.pop();
 
-		const inner = card.width - card.padding * 2;
 		if (texture) {
-			const image = rect(x + card.padding, y + card.padding, inner, card.imageHeight);
+			const image = rect(x + card.padding, y + card.padding, inner, imageHeight);
 			snapshot.pushRoundedClip(rounded(image, card.radius - card.padding / 2));
 			snapshot.appendTexture(texture, image);
 			snapshot.pop();
@@ -265,7 +252,7 @@ export class TimelineView {
 		text.setWidth(inner * pangoScale);
 		text.setEllipsize(Pango.EllipsizeMode.end);
 		snapshot.save();
-		snapshot.translate(point({ x: x + card.padding, y: y + card.padding + imageHeight }));
+		snapshot.translate(point({ x: x + card.padding, y: y + card.padding + imageArea }));
 		snapshot.appendLayout(text, colors.foreground);
 		snapshot.restore();
 	}
