@@ -63,10 +63,12 @@ export class TimelinePage {
 
 	public constructor(
 		protected readonly location: SaveLocation,
-		protected readonly toast: (title: string) => void
+		protected readonly toast: (title: string) => void,
+		protected readonly inspect: (save: Save) => void
 	) {
 		const { game } = location;
 		this.actions = [
+			...(game.inspector ? [{ id: 'inspect', label: text('action.inspect'), canRun: () => true }] : []),
 			...game.actions,
 			{ id: 'open', label: text('action.open'), canRun: () => true },
 			{ id: 'delete', label: text('action.delete'), isDestructive: true, canRun: () => true },
@@ -255,6 +257,7 @@ export class TimelinePage {
 
 	protected run(id: string, save: Save): void {
 		if (id == 'delete') return this.confirmDelete(save);
+		if (id == 'inspect') return this.inspect(save);
 		try {
 			if (id == 'open') {
 				const folder = statSync(save.path).isDirectory() ? save.path : dirname(save.path);

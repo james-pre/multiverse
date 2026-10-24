@@ -1,4 +1,5 @@
 import { connect } from 'girbind';
+import * as Adw from '../../native/adw.js';
 import * as Gtk from '../../native/gtk.js';
 import * as Pango from '../../native/pango.js';
 import type { Game } from '../games/index.js';
@@ -64,7 +65,12 @@ export class SaveCard {
 		}
 
 		const row = new Gtk.Box(Gtk.Orientation.horizontal, 16);
-		for (const widget of [this.picture, info, buttons]) row.append(widget);
+		// A picture asks for its screenshot's full size, so this keeps it thumbnail sized.
+		const thumbnail = new Adw.Clamp();
+		thumbnail.setMaximumSize(192);
+		thumbnail.setTighteningThreshold(192);
+		thumbnail.setChild(this.picture);
+		for (const widget of [thumbnail, info, buttons]) row.append(widget);
 		this.widget.addNamed(row, 'save');
 
 		this.widget.setMarginTop(12);
