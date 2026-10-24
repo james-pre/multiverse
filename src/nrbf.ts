@@ -109,7 +109,7 @@ class Reader {
 	protected readonly view: DataView;
 	protected readonly classes = new Map<number, ClassMetadata>();
 	public readonly objects = new Map<number, unknown>();
-	protected readonly fixups: { container: Record<number | string, unknown>; key: number | string; id: number }[] = [];
+	protected readonly fixups: { container: object; key: number | string; id: number }[] = [];
 
 	public constructor(protected readonly data: Uint8Array) {
 		this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -228,20 +228,22 @@ class Reader {
 		return { id, metadata: { name, memberNames } };
 	}
 
-	/** Stores a value, deferring references until every object has been read. */
-	protected assign(container: Record<number | string, unknown>, key: number | string, value: unknown): void {
-		if (value instanceof Reference) this.fixups.push({ container, key, id: value.id });
-		container[key] = value instanceof Reference ? undefined : value;
+	/** The value to store, deferring references until every object has been read */
+	protected stored(container: object, key: number | string, value: unknown): unknown {
+		if (!(value instanceof Reference)) return value;
+		this.fixups.push({ container, key, id: value.id });
+		return undefined;
 	}
 
 	protected instance(id: number, metadata: ClassMetadata): Instance {
 		const object: Instance = { [className]: metadata.name };
 		this.objects.set(id, object);
-		metadata.memberNames.forEach((name, i) => {
-			const type = metadata.memberTypes?.[i];
+		const { memberNames, memberTypes } = metadata;
+		for (let i = 0; i < memberNames.length; i++) {
+			const type = memberTypes?.[i];
 			const value = type?.binaryType == BinaryType.Primitive ? this.primitive(type.primitiveType!) : this.value();
-			this.assign(object, name, value);
-		});
+			object[memberNames[i]] = this.stored(object, memberNames[i], value);
+		}
 		return object;
 	}
 
@@ -251,7 +253,8 @@ class Reader {
 		for (let i = 0; i < length;) {
 			const value = read();
 			if (!(value instanceof NullRun)) {
-				this.assign(array, i++, value);
+				array[i] = this.stored(array, i, value);
+				i++;
 				continue;
 			}
 			array.fill(null, i, i + value.count);
@@ -349,7 +352,7 @@ class Reader {
 	}
 
 	public resolve(): void {
-		for (const { container, key, id } of this.fixups) container[key] = this.objects.get(id);
+		for (const { container, key, id } of this.fixups) Reflect.set(container, key, this.objects.get(id));
 	}
 }
 

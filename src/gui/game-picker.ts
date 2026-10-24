@@ -5,9 +5,12 @@ import * as Adw from '../../native/adw.js';
 import * as Gtk from '../../native/gtk.js';
 import { findSaveDirectories, games, type SaveLocation } from '../games/index.js';
 import { text } from '../i18n.js';
+import * as steam from '../steam.js';
 
-/** Shortens paths in the user's home directory to start with `~`. */
-function abbreviateHome(path: string): string {
+/** Shortens paths in Proton prefixes to start with `S:`, and paths in the user's home directory to start with `~`. */
+function abbreviate(path: string): string {
+	const short = steam.shortPath(path);
+	if (short != path) return short;
 	const home = homedir();
 	return path == home || path.startsWith(home + sep) ? '~' + path.slice(home.length) : path;
 }
@@ -26,9 +29,10 @@ export class GamePicker {
 			const row = new Adw.ActionRow();
 			row.setUseMarkup(false);
 			row.setTitle(game.name);
-			row.setSubtitle(directory ? abbreviateHome(directory) : text('picker.no_saves'));
+			row.setSubtitle(directory ? abbreviate(directory) : text('picker.no_saves'));
 			row.setSensitive(!!directory);
 			if (directory) {
+				row.setTooltipText(directory);
 				row.setActivatable(true);
 				row.addSuffix(Gtk.Image.newFromIconName('go-next-symbolic'));
 				connect(row, 'activated', () => onOpen({ game, directory }));

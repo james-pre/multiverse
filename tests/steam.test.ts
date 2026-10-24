@@ -39,4 +39,11 @@ suite('steam', () => {
 		assert.equal(first, '/games/main/steamapps/compatdata/1091500/pfx/drive_c/users/steamuser/Saved Games/Test');
 		assert.match(second, /^\/games\/other\//);
 	});
+
+	test('shortPath shortens paths in Proton prefixes only', () => {
+		const prefix = '/games/steamapps/compatdata/1511460/pfx/drive_c/users/steamuser';
+		assert.equal(steam.shortPath(`${prefix}/AppData/LocalLow/Game`), 'S:/AppData/LocalLow/Game');
+		assert.equal(steam.shortPath(prefix), 'S:');
+		assert.equal(steam.shortPath('/home/user/saves'), '/home/user/saves');
+	});
 });

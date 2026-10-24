@@ -106,3 +106,11 @@ export function saveDirectories({ id, saves }: Game, available: Library[] = libr
 		.toSorted((a, b) => Number(b.apps.has(id)) - Number(a.apps.has(id)))
 		.map(library => join(library.path, 'steamapps/compatdata', String(id), 'pfx/drive_c/users/steamuser', saves));
 }
+
+/** Proton prefixes' user profile directories */
+const prefixProfile = /^.*\/steamapps\/compatdata\/\d+\/pfx\/drive_c\/users\/steamuser(?=\/|$)/;
+
+/** Shortens a path in a Proton prefix's user profile to start with `S:`, or returns it unchanged. */
+export function shortPath(path: string): string {
+	return path.replace(prefixProfile, 'S:');
+}
