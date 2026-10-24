@@ -4,15 +4,19 @@ import { join } from 'node:path';
 import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';
 import type { Game } from '../index.js';
+import { inspector } from './inspect.js';
 import { readSaveFolder } from './save-file.js';
 
 const folderPattern = /^SaveGame_(\d+)$/;
 
 const slotCount = 5;
 
+/** The folders of the game's save slots */
+export const slots = Array.from({ length: slotCount }, (_, i) => `SaveGame_${i + 1}`);
+
 const romanTiers = ['I', 'II', 'III', 'IV', 'V'];
 
-function money(amount: number): string {
+export function money(amount: number): string {
 	return amount.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 }
 
@@ -66,7 +70,8 @@ export const scheduleI: Game = {
 	id: 'schedule-i',
 	name: 'Schedule I',
 	steam: { id: 3164500, saves: 'AppData/LocalLow/TVGS/Schedule I/Saves/*' },
-	archive: { slots: Array.from({ length: slotCount }, (_, i) => `SaveGame_${i + 1}`) },
+	archive: { slots },
+	inspector,
 	describe(timeline) {
 		const latest = timeline.nodes.at(-1)!.save;
 		return text('schedule.playthrough', { organisation: latest.label, slot: latest.name });
