@@ -1,4 +1,5 @@
 import { checkEditValue, type Edit, type EditOptions, type EditValue } from './editing.js';
+import { rangeEntries, valueEntry, type Entry } from './inspection.js';
 
 /** Where a value is in the text */
 interface Span {
@@ -196,6 +197,35 @@ export class JsonDocument {
 		}
 		this.children.set(id, { container, key, document });
 		return document;
+	}
+
+	/** Describes a value in the document for inspection, with edits for values without members */
+	public entry(name: string, value: unknown = this.value, edit?: Edit): Entry {
+		if (Array.isArray(value)) {
+			return {
+				name,
+				summary: `[${value.length}]`,
+				children: value.length
+					? () => rangeEntries(value.length, i => this.memberEntry(String(i), value, i))
+					: undefined,
+			};
+		}
+		if (typeof value == 'object' && value !== null) {
+			const keys = Object.keys(value);
+			return {
+				name,
+				summary: keys.length ? '{…}' : '{}',
+				children: keys.length ? () => keys.map(key => this.memberEntry(key, value, key)) : undefined,
+			};
+		}
+		return valueEntry(name, value, {}, edit);
+	}
+
+	/** Describes a member, showing strings that are JSON as the documents in them */
+	protected memberEntry(name: string, container: object, key: string | number): Entry {
+		const value = Reflect.get(container, key) as unknown;
+		const nested = typeof value == 'string' && /^\s*[[{]/.test(value) ? this.nested(container, key) : undefined;
+		return nested ? nested.entry(name) : this.entry(name, value, this.edit(container, key));
 	}
 
 	/** The text with every change */

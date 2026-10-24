@@ -400,6 +400,39 @@
 			"balance": "Balance",
 			"quests": "Quests completed",
 			"version": "Version"
+		},
+		"no_free_slot": "Every save slot has a save in it. Delete or archive one to make a copy.",
+		"section": {
+			"organisation": {
+				"title": "Organisation",
+				"description": "The organisation, and how long it has been running"
+			},
+			"money": {
+				"title": "Money",
+				"description": "The money in the bank and in your pocket"
+			},
+			"rank": {
+				"title": "Rank",
+				"description": "Your rank and the experience towards the next one"
+			}
+		},
+		"row": {
+			"name": "Name",
+			"version": "Version",
+			"seed": "Seed",
+			"created": "Created",
+			"last_played": "Last played",
+			"play_time": "Play time",
+			"days": "Days passed",
+			"quests": "Quests completed",
+			"balance": "Bank balance",
+			"cash": "Cash",
+			"networth": "Net worth",
+			"earnings": "Lifetime earnings",
+			"rank": "Rank",
+			"tier": "Tier",
+			"experience": "Experience",
+			"total_experience": "Total experience"
 		}
 	},
 	"subnautica": {
@@ -419,6 +452,28 @@
 		"detail": {
 			"started": "Started",
 			"build": "Game build"
+		}
+	},
+	"editor": {
+		"expert": "Expert Mode",
+		"expert_tooltip": "Allow changing any value, which is more likely to break the save",
+		"save_copy": "Save Copy",
+		"overwrite": "Overwrite Original",
+		"saved_copy": "Saved the changes to {name}",
+		"saved_original": "Saved the changes over the original",
+		"archived": "This save is only in the archive. Put it in the game to edit it.",
+		"warning": {
+			"heading": "Save Changes?",
+			"copy": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes go to a copy, so “{name}” stays as it is.",
+			"overwrite": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes replace “{name}”, which can't be undone.",
+			"overwrite_archived": "Editing a save can corrupt it, or break the game in ways that only show up later. The changes replace “{name}”, which is archived first.",
+			"cancel": "Cancel"
+		},
+		"discard": {
+			"heading": "Discard Changes?",
+			"body": "The changes haven't been saved.",
+			"cancel": "Cancel",
+			"confirm": "Discard"
 		}
 	}
 }
