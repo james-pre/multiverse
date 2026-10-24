@@ -12,7 +12,7 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { isSea } from 'node:sea';
 
-export const applicationId = 'dev.jamespre.SaveTimeline';
+export const applicationId = 'dev.jamespre.Multiverse';
 
 const packageData = join(import.meta.dirname, '..', 'data');
 
