@@ -80,7 +80,7 @@ export class SaveFile {
 				return decompressBlock(readRange(this.path, this.bodyOffset, stored), this.bodySize, limit);
 			}
 			default:
-				throw new Error(`Unknown compression: ${this.header.compressionType}`);
+				throw new Error(`Unknown compression: ${String(this.header.compressionType)}`);
 		}
 	}
 

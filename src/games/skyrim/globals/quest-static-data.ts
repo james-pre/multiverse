@@ -40,7 +40,7 @@ const Unknown0 = struct.packed(
 	{
 		id: RefID,
 		count: vsval,
-		unknown1: array(Unknown1).countedBy((u) => getVsval(u.count)),
+		unknown1: array(Unknown1).countedBy(u => getVsval(u.count)),
 	},
 	{ isDynamic: true }
 );
@@ -49,8 +49,8 @@ const QuestRunDataItem3Data = struct.packed(
 	'QuestRunDataItem3Data',
 	{
 		type: t.uint32,
-		unk_u32: array(primitive.types.uint32).countedBy((qd) => (qd.type == 3 ? 1 : 0)),
-		unk_refid: array(RefID).countedBy((qd) => ([1, 2, 4].includes(qd.type) ? 1 : 0)),
+		unk_u32: array(primitive.types.uint32).countedBy(qd => (qd.type == 3 ? 1 : 0)),
+		unk_refid: array(RefID).countedBy(qd => ([1, 2, 4].includes(qd.type) ? 1 : 0)),
 	},
 	{ isDynamic: true }
 );
@@ -80,7 +80,7 @@ export const QuestStaticData = struct.packed(
 		count4: t.uint32,
 		unk4: array(RefID).countedBy('count4'),
 		count5: vsval,
-		unk5: array(Unknown0).countedBy((u) => getVsval(u.count5)),
+		unk5: array(Unknown0).countedBy(u => getVsval(u.count5)),
 		unk6: t.uint8,
 	},
 	{ isDynamic: true }

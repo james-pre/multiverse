@@ -13,9 +13,9 @@ const Interface_Unknown0 = struct.packed(
 	'Interface_Unknown0',
 	{
 		count1: vsval,
-		unknown1: array(Interface_Unknown0_0).countedBy((u) => getVsval(u.count1)),
+		unknown1: array(Interface_Unknown0_0).countedBy(u => getVsval(u.count1)),
 		count2: vsval,
-		unknown2: array(wstring).countedBy((u) => getVsval(u.count2)),
+		unknown2: array(wstring).countedBy(u => getVsval(u.count2)),
 		unknown3: t.uint32,
 	},
 	{ isDynamic: true }
@@ -47,11 +47,11 @@ export const Interface = struct.packed(
 		shownHelpMsg: array(primitive.types.uint32).countedBy('shownHelpMsgCount'),
 		unknown0: t.uint8,
 		lastUsedWeaponsCount: vsval,
-		lastUsedWeapons: array(RefID).countedBy((i) => getVsval(i.lastUsedWeaponsCount)),
+		lastUsedWeapons: array(RefID).countedBy(i => getVsval(i.lastUsedWeaponsCount)),
 		lastUsedSpellsCount: vsval,
-		lastUsedSpells: array(RefID).countedBy((i) => getVsval(i.lastUsedSpellsCount)),
+		lastUsedSpells: array(RefID).countedBy(i => getVsval(i.lastUsedSpellsCount)),
 		lastUsedShoutsCount: vsval,
-		lastUsedShouts: array(RefID).countedBy((i) => getVsval(i.lastUsedShoutsCount)),
+		lastUsedShouts: array(RefID).countedBy(i => getVsval(i.lastUsedShoutsCount)),
 		unknown1: t.uint8,
 		/** This value is only present in certain situations. Undetermined when.  */
 		unknown: array(Interface_Unknown0, 0),

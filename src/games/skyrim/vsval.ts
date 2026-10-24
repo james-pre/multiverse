@@ -28,7 +28,7 @@ export const vsval = struct.packed(
 	'vsval',
 	{
 		byte0: t.uint8,
-		rest: array(primitive.types.uint8).countedBy((v) => [0, 1, 3][v.byte0 & 0b11]),
+		rest: array(primitive.types.uint8).countedBy(v => [0, 1, 3][v.byte0 & 0b11]),
 	},
 	{ isDynamic: true }
 );

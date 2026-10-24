@@ -59,7 +59,7 @@ export enum ChangeFormType {
 /**
  * @todo
  */
-const changeFormStructs = [
+export const changeFormStructs = [
 	null, // REFR
 	null, // ACHR
 	null, // PMIS
@@ -250,7 +250,7 @@ function CFDynamicData<FB extends FieldBuilder<Type<number>>>(Length: FB): CFDyn
 		'ChangeForm/dynamic/' + Length.toInit().type.name,
 		{
 			lengths: Length(2),
-			raw: t.uint8(0).countedBy((cf) => cf.lengths[0]),
+			raw: t.uint8(0).countedBy(cf => cf.lengths[0]),
 		},
 		{
 			isDynamic: true,
@@ -270,7 +270,7 @@ export class ChangeForm extends struct.packed(
 		_raw: t.uint8(0).countedBy((cf: DataView & { lengthSize: 0 | 1 | 2 }) => {
 			const { lengthSize } = cf;
 			const size = 2 << lengthSize;
-			const dv = new DataView(cf.buffer, offsetof(cf, '_raw'));
+			const dv = new DataView(cf.buffer, cf.byteOffset + offsetof(cf, '_raw'));
 			switch (lengthSize) {
 				case 0:
 					return size + dv.getUint8(0);
@@ -310,8 +310,13 @@ export class ChangeForm extends struct.packed(
 		return uncompressedLength ? inflateSync(raw, { maxOutputLength: uncompressedLength }) : raw;
 	}
 
+	/** The type, without the length size in its upper 2 bits */
+	get formType(): ChangeFormType {
+		return this.type & 0b111111;
+	}
+
 	summary(excludeVersion?: number): string {
-		const type = this.type in ChangeFormType ? ChangeFormType[this.type] : formatNumber(this.type, 16);
+		const type = this.formType in ChangeFormType ? ChangeFormType[this.formType] : formatNumber(this.formType, 16);
 		return this.version === excludeVersion ? type : `${type} (v${formatNumber(this.version)})`;
 	}
 

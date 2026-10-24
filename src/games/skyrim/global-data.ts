@@ -73,7 +73,9 @@ export const globalStructMap = {
 } as const satisfies Record<GlobalDataType, StructConstructor<any> | null>;
 
 type __instances = {
-	[K in GlobalDataType]: (typeof globalStructMap)[K] extends StructConstructor<any> ? InstanceOf<(typeof globalStructMap)[K]> : null;
+	[K in GlobalDataType]: (typeof globalStructMap)[K] extends StructConstructor<any>
+		? InstanceOf<(typeof globalStructMap)[K]>
+		: null;
 };
 
 type InstanceFor<T extends GlobalDataType> = __instances[T];
@@ -124,12 +126,15 @@ function magicEffectText(ef: globals.MagicEffect): string {
 	return text;
 }
 
-export function* dumpGlobal<T extends GlobalDataType>(type: T, instance: InstanceFor<T>): Generator<string | { toString(): string }> {
+export function* dumpGlobal<T extends GlobalDataType>(
+	type: T,
+	instance: InstanceFor<T>
+): Generator<string | { toString(): string }> {
 	const $ = { type, instance } as { [K in GlobalDataType]: { type: K; instance: __instances[K] } }[GlobalDataType];
 
 	switch ($.type) {
 		case GlobalDataType.MiscStats: {
-			const grouped = Object.groupBy($.instance.stats, (stat) => stat.category);
+			const grouped = Object.groupBy($.instance.stats, stat => stat.category);
 			for (const [category, stats] of Object.entries(grouped) as any as Entries<typeof grouped>) {
 				if (!stats) continue;
 				yield `---- ${globals.StatCategory[category]} ----`;
@@ -141,8 +146,8 @@ export function* dumpGlobal<T extends GlobalDataType>(type: T, instance: Instanc
 			return;
 		}
 		case GlobalDataType.PlayerLocation:
-			yield `world space #1: ${$.instance.worldSpace1}, cell (${$.instance.coorX}, ${$.instance.coorY})`;
-			yield `world space #2: ${$.instance.worldSpace2}, position (${$.instance.posX.toFixed(2)}, ${$.instance.posY.toFixed(2)}, ${$.instance.posZ.toFixed(2)})`;
+			yield `world space #1: ${$.instance.worldSpace1.pretty()}, cell (${$.instance.coorX}, ${$.instance.coorY})`;
+			yield `world space #2: ${$.instance.worldSpace2.pretty()}, position (${$.instance.posX.toFixed(2)}, ${$.instance.posY.toFixed(2)}, ${$.instance.posZ.toFixed(2)})`;
 			return;
 		case GlobalDataType.TES:
 			yield __unknown;
@@ -213,7 +218,9 @@ export function* dumpGlobal<T extends GlobalDataType>(type: T, instance: Instanc
 			yield __unknown;
 			return;
 		default:
-			yield instance === null ? '???' : `Missing dump logic for ${GlobalDataType[type]} (this is probably a bug!)`;
+			yield instance === null
+				? '???'
+				: `Missing dump logic for ${GlobalDataType[type]} (this is probably a bug!)`;
 			return;
 	}
 }

@@ -5,7 +5,7 @@ export * from './misc-stats.js';
 export * from './process-lists.js';
 export * from './quest-static-data.js';
 
-import { array, struct, types as t, type StructConstructor } from 'memium';
+import { array, struct, types as t } from 'memium';
 import { RefID } from '../ref-id.js';
 import { getVsval, vsval } from '../vsval.js';
 
@@ -43,11 +43,11 @@ export const TES = struct.packed(
 	'TES',
 	{
 		count1: vsval,
-		unknown0: array(TES_Unknown0).countedBy((tes) => getVsval(tes.count1)),
+		unknown0: array(TES_Unknown0).countedBy(tes => getVsval(tes.count1)),
 		count2: t.uint32,
-		unknown1: array(RefID).countedBy((tes) => tes.count2 * tes.count2),
+		unknown1: array(RefID).countedBy(tes => tes.count2 * tes.count2),
 		count3: vsval,
-		unknown2: array(RefID).countedBy((tes) => getVsval(tes.count3)),
+		unknown2: array(RefID).countedBy(tes => getVsval(tes.count3)),
 	},
 	{ isDynamic: true }
 );
@@ -63,7 +63,7 @@ export const GlobalVariables = struct.packed(
 	'GlobalVariables',
 	{
 		count: vsval,
-		variables: array(GlobalVariable).countedBy((gv) => getVsval(gv.count)),
+		variables: array(GlobalVariable).countedBy(gv => getVsval(gv.count)),
 	},
 	{ isDynamic: true }
 );
@@ -84,7 +84,7 @@ export const Effects = struct.packed(
 	'Effects',
 	{
 		count: vsval,
-		imageSpaceModifiers: array(Effect).countedBy((e) => getVsval(e.count)),
+		imageSpaceModifiers: array(Effect).countedBy(e => getVsval(e.count)),
 		unknown1: t.float32,
 		unknown2: t.float32,
 	},
@@ -120,7 +120,7 @@ export const Audio = struct.packed('Audio', {
 	unknown: RefID,
 	tracksCount: vsval,
 	/** Seems to contain music tracks (MUST records) that were playing at the time of saving, not including the background music. */
-	tracks: array(RefID).countedBy((a) => getVsval(a.tracksCount)),
+	tracks: array(RefID).countedBy(a => getVsval(a.tracksCount)),
 	bgm: RefID,
 });
 
@@ -135,7 +135,7 @@ export const SkyCells = struct.packed(
 	'SkyCells',
 	{
 		count: vsval,
-		cells: array(SkyCell).countedBy((sc) => getVsval(sc.count)),
+		cells: array(SkyCell).countedBy(sc => getVsval(sc.count)),
 	},
 	{ isDynamic: true }
 );
@@ -155,7 +155,7 @@ export const ActorCauses = struct.packed(
 	{
 		nextNum: t.uint32,
 		count0: vsval,
-		unknown0: array(ActorCause_Unknown0).countedBy((ac) => getVsval(ac.count0)),
+		unknown0: array(ActorCause_Unknown0).countedBy(ac => getVsval(ac.count0)),
 	},
 	{ isDynamic: true }
 );
@@ -172,7 +172,7 @@ export const DetectionManager = struct.packed(
 	'DetectionManager',
 	{
 		count: vsval,
-		unknown: array(DetectionManager_Unknown0).countedBy((dm) => getVsval(dm.count)),
+		unknown: array(DetectionManager_Unknown0).countedBy(dm => getVsval(dm.count)),
 	},
 	{ isDynamic: true }
 );
@@ -188,7 +188,7 @@ export const LocationMetaData = struct.packed(
 	'LocationMetaData',
 	{
 		count: vsval,
-		unknown: array(LocationMetaData_Unknown0).countedBy((lmd) => getVsval(lmd.count)),
+		unknown: array(LocationMetaData_Unknown0).countedBy(lmd => getVsval(lmd.count)),
 	},
 	{ isDynamic: true }
 );

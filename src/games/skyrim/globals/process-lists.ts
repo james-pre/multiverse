@@ -35,7 +35,7 @@ export const Crime = struct.packed(
 		/** Faction, outfit etc. Only for thefts */
 		ownershipID: RefID,
 		witnessCount: vsval,
-		witnesses: array(RefID).countedBy((crime) => getVsval(crime.witnessCount)),
+		witnesses: array(RefID).countedBy(crime => getVsval(crime.witnessCount)),
 		bounty: t.uint32,
 		crimeFactionID: RefID,
 		/** 0 - active crime, 1 - it was atoned */
@@ -51,7 +51,7 @@ export const CrimesOfType = struct.packed(
 	'CrimesOfType',
 	{
 		count: vsval,
-		crimes: array(Crime).countedBy((cot) => getVsval(cot.count)),
+		crimes: array(Crime).countedBy(cot => getVsval(cot.count)),
 	},
 	{ isDynamic: true }
 );

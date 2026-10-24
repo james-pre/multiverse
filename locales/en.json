@@ -43,5 +43,15 @@
 			"patch": "Patch",
 			"modded": "Modded"
 		}
+	},
+	"skyrim": {
+		"playthrough": "{name} · {race} · Level {level}",
+		"level": "Level {level}",
+		"detail": {
+			"days_passed": "Days passed",
+			"quests_completed": "Quests completed",
+			"locations_discovered": "Locations discovered",
+			"dragon_souls": "Dragon souls"
+		}
 	}
 }

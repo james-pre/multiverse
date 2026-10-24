@@ -15,7 +15,11 @@ export class RefID extends struct.packed('RefID', {
 		const hex = this.toString();
 		return styleText(
 			'cyanBright',
-			hex.toUpperCase() in refs ? refs[hex.toUpperCase() as keyof typeof refs] : hex.toLowerCase() in refs ? refs[hex.toLowerCase() as keyof typeof refs] : hex
+			hex.toUpperCase() in refs
+				? refs[hex.toUpperCase() as keyof typeof refs]
+				: hex.toLowerCase() in refs
+					? refs[hex.toLowerCase() as keyof typeof refs]
+					: hex
 		);
 	}
 

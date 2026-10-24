@@ -22,8 +22,8 @@ const kinds: Record<string, string> = {
 	Exitsave: 'exit',
 };
 
-/** Misc stats that can go down, so they can't show which save came first */
-const unorderedStats = /Bounty$|^Favorite |^Horses Owned$/;
+/** Misc stats that can go down, so they can't show which save came first. Faction quest counts are recounted for repeatable quests. */
+const unorderedStats = /Bounty$|^Favorite |^Horses Owned$|^(?!Quests Completed$).+ Quests Completed$/;
 
 /** Parses play time like `104.19.59` (hours, minutes and seconds), in seconds. */
 export function parsePlayTime(playTime: string): number {

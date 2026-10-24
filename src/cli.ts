@@ -1,5 +1,6 @@
 import { Command, Option } from 'commander';
 import * as io from 'ioium/node';
+import { writeFileSync } from 'node:fs';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
@@ -62,6 +63,35 @@ cli.command('tree')
 			const saves = io.track(`Scanning ${game.name} saves in ${directory}`, () => game.scan(directory));
 			for (const timeline of Timeline.fromSaves(saves)) printTimeline(game, timeline);
 		}
+	});
+
+cli.command('inspect')
+	.description('Show what is in a save file')
+	.argument('<save>', 'Path to the save file')
+	.argument('[sections...]', 'Sections to show (default: all)')
+	.addOption(gameOption)
+	.option('--decompressed <path>', 'Also write the save data without compression to a file')
+	.action((path, sections, options) => {
+		const game = options.game
+			? getGame(options.game)
+			: [...games.values()].find(game => game.inspector?.recognizes(path));
+		const inspector = game?.inspector;
+		if (!inspector) io.exit(`Could not tell which game ${path} is from, use --game`);
+
+		const unknown = sections.filter(section => !(section in inspector.sections));
+		if (unknown.length) {
+			const known = Object.entries(inspector.sections).map(
+				([name, description]) => `\n  ${name}: ${description}`
+			);
+			io.exit(`Unknown sections: ${unknown.join(', ')}. ${game.name} saves have:${known.join('')}`);
+		}
+
+		const chosen = new Set(sections.length ? sections : Object.keys(inspector.sections));
+		for (const line of inspector.inspect(path, chosen)) io.log(line);
+
+		if (!options.decompressed) return;
+		if (!inspector.decompress) io.exit(`${game.name} saves are not compressed`);
+		writeFileSync(options.decompressed, inspector.decompress(path));
 	});
 
 cli.command('gui', { isDefault: true })
