@@ -3,7 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { rankName, scheduleI } from '../src/games/schedule-i/index.js';
+import { scheduleI } from '../src/games/schedule-i/index.js';
+import { rankName } from '../src/games/schedule-i/names.js';
 import { Timeline } from '../src/timeline.js';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));

@@ -6,7 +6,7 @@ import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
 import { JsonDocument } from '../../json.js';
 import type { Inspector } from '../index.js';
-import { money, rankName, slots } from './index.js';
+import { money, rankName, slots } from './names.js';
 import { readSaveFolder } from './save-file.js';
 
 const sections = {

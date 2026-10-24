@@ -48,23 +48,23 @@ export function run(location?: SaveLocation): void {
 	};
 
 	const preferences = new Gio.SimpleAction('preferences', null);
-	connect(preferences, 'activate', () => preferencesDialog(setAutoArchive).present(main?.window));
+	connect(preferences, 'activate', () => preferencesDialog(setAutoArchive).present(main));
 	app.addAction(preferences);
 	app.setAccelsForAction('app.preferences', ['<Control>comma']);
 
 	connect(app, 'activate', () => {
-		if (main) return main.window.present();
+		if (main) return main.present();
 
 		const hold = keepAlive();
 		main = new MainWindow(app);
 		if (location) main.open(location);
 		setAutoArchive(settings.data.autoArchive);
-		connect(main.window, 'close-request', () => {
+		connect(main as Adw.ApplicationWindow, 'close-request', () => {
 			main = undefined;
 			setAutoArchive(false);
 			hold.release();
 		});
-		main.window.present();
+		main.present();
 	});
 
 	app.register(null);

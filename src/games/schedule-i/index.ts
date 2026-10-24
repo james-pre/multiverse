@@ -5,25 +5,10 @@ import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';
 import type { Game } from '../index.js';
 import { inspector } from './inspect.js';
+import { money, rankName, slots } from './names.js';
 import { readSaveFolder } from './save-file.js';
 
 const folderPattern = /^SaveGame_(\d+)$/;
-
-const slotCount = 5;
-
-/** The folders of the game's save slots */
-export const slots = Array.from({ length: slotCount }, (_, i) => `SaveGame_${i + 1}`);
-
-const romanTiers = ['I', 'II', 'III', 'IV', 'V'];
-
-export function money(amount: number): string {
-	return amount.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
-}
-
-export function rankName(rank: number, tier: number): string {
-	const name = text(`schedule.rank.${rank}`, { $default: text('schedule.rank.unknown', { rank }) });
-	return `${name} ${romanTiers[tier - 1] ?? tier}`;
-}
 
 function readSave(directory: string, folderName: string): Save | undefined {
 	const match = folderPattern.exec(folderName);

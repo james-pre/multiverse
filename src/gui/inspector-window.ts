@@ -143,8 +143,7 @@ export class InspectorWindow extends Adw.ApplicationWindow {
 		/** For games whose saves can be archived, so the original is archived before it is overwritten */
 		protected readonly archive?: Archive
 	) {
-		super();
-		this.setApplication(application);
+		super(application);
 		this.setTitle(text('inspector.title', { name: save.name }));
 		this.setDefaultSize(760, 860);
 
