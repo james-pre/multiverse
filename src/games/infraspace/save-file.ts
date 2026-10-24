@@ -1,4 +1,5 @@
 import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs';
+import { JsonDocument } from '../../json.js';
 
 /** Header dates like `10/11/2026 21:58:04`, in UTC */
 const datePattern = /^(\d+)\/(\d+)\/(\d+) (\d+):(\d+):(\d+)$/;
@@ -93,11 +94,24 @@ export function isSave(path: string): boolean {
 	}
 }
 
-/** Reads the whole save, which is slow for large cities. */
-export function readWhole(path: string): { header: Header; body: Record<string, unknown> } {
-	const text = decode(readFileSync(path));
+/** The whole save, with its body read so its values can be changed */
+export interface EditableSave {
+	header: Header;
+	/** The text before the body, with the byte order mark if the file has one */
+	head: string;
+	body: JsonDocument;
+}
+
+export function openSave(path: string): EditableSave {
+	const raw = readFileSync(path).toString('utf8');
+	const text = raw.replace(/^\ufeff/, '');
 	const header = parseHeader(text);
-	return { header, body: JSON.parse(text.slice(header.bodyStart)) as Record<string, unknown> };
+	const bom = raw.length - text.length;
+	return {
+		header,
+		head: raw.slice(0, bom + header.bodyStart),
+		body: new JsonDocument(text.slice(header.bodyStart)),
+	};
 }
 
 export interface SaveFile extends Header {

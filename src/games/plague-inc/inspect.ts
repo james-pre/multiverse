@@ -1,5 +1,6 @@
-import { closeSync, openSync, readSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { copySave } from '../../editing.js';
 import { decodeUTF8 } from 'utilium';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { ticksToDateTime } from '../../dotnet.js';
@@ -31,19 +32,7 @@ const sections = {
 /** The longest summary of a value in the contents, in characters */
 const summaryLength = 200;
 
-function fieldEntry(name: string, value: string): Entry {
-	const decoded = decodeValue(value);
-	if (!isFields(decoded)) {
-		const summary = decoded.length > summaryLength ? decoded.slice(0, summaryLength) + '…' : decoded;
-		return { name, summary };
-	}
-	const fields = Object.entries(parseFields(decoded));
-	return {
-		name,
-		summary: formatValue(fields.length),
-		children: () => fields.map(([field, value]) => fieldEntry(field, value)),
-	};
-}
+const fileNamePattern = /^save_(\d+)\.dat$/;
 
 class PlagueInspection implements Inspection {
 	protected readonly file: SaveFile;
@@ -51,7 +40,7 @@ class PlagueInspection implements Inspection {
 
 	public constructor(protected readonly path: string) {
 		this.file = readSaveFile(path);
-		const number = Number(/^save_(\d+)\.dat$/.exec(basename(path))?.[1]);
+		const number = Number(fileNamePattern.exec(basename(path))?.[1]);
 		this.slot = readSlots(dirname(path)).get(number);
 	}
 
@@ -68,7 +57,11 @@ class PlagueInspection implements Inspection {
 		const rows: Row[] = [
 			{ label: text('plague.row.name'), value: diseaseName(disease, this.slot) },
 			{ label: text('plague.row.type'), value: diseaseTypeName(disease, this.slot) },
-			{ label: text('plague.row.difficulty'), value: difficultyName(this.number(disease, 'difficulty')) },
+			{
+				label: text('plague.row.difficulty'),
+				value: difficultyName(this.number(disease, 'difficulty')),
+				edit: this.file.edit(['0', 'difficulty'], { minimum: 0, maximum: 3 }),
+			},
 			{ label: text('plague.row.mode'), value: this.value(world, 'gameType') || this.slot?.mode || '' },
 		];
 		if (this.slot?.scenario) rows.push({ label: text('plague.row.scenario'), value: humanize(this.slot.scenario) });
@@ -81,9 +74,17 @@ class PlagueInspection implements Inspection {
 		}
 		const traits = this.value(disease, 'tech').split(',').filter(Boolean);
 		rows.push(
-			{ label: text('plague.row.day'), value: formatValue(this.number(disease, 'turnNumber')) },
+			{
+				label: text('plague.row.day'),
+				value: formatValue(this.number(disease, 'turnNumber')),
+				edit: this.file.edit(['0', 'turnNumber'], { minimum: 0 }),
+			},
 			{ label: text('plague.row.play_time'), value: hoursAndMinutes(Number(fields.gameTime ?? 0)) },
-			{ label: text('plague.row.dna'), value: formatValue(this.number(disease, 'evoPoints')) },
+			{
+				label: text('plague.row.dna'),
+				value: formatValue(this.number(disease, 'evoPoints')),
+				edit: this.file.edit(['0', 'evoPoints'], { safe: true, minimum: 0 }),
+			},
 			{
 				label: text('plague.row.traits'),
 				value: formatValue(traits.length),
@@ -113,7 +114,11 @@ class PlagueInspection implements Inspection {
 				detail: percent(this.number(disease, 'globalDeadPercent')),
 			},
 			{ label: text('plague.row.healthy'), value: formatValue(this.number(disease, 'totalHealthy')) },
-			{ label: text('plague.row.cure'), value: percent(this.number(disease, 'cureCompletePercent')) },
+			{
+				label: text('plague.row.cure'),
+				value: percent(this.number(disease, 'cureCompletePercent')),
+				edit: this.file.edit(['0', 'cureCompletePercent'], { minimum: 0, maximum: 1 }),
+			},
 			{
 				label: text('plague.row.infected_countries'),
 				value: text('plague.row.of', { count: infected, total: countries }),
@@ -161,9 +166,40 @@ class PlagueInspection implements Inspection {
 		return {
 			name: basename(this.path),
 			summary: '',
-			children: () => fields.map(([name, value]) => fieldEntry(name, value)),
+			children: () => fields.map(([name, value]) => this.fieldEntry(name, value, [name])),
 		};
 	}
+
+	/** Describes a field, with its fields as children if its value is made of them */
+	protected fieldEntry(name: string, value: string, path: string[]): Entry {
+		const decoded = decodeValue(value);
+		if (!isFields(decoded)) {
+			const summary = decoded.length > summaryLength ? decoded.slice(0, summaryLength) + '…' : decoded;
+			return { name, summary, edit: this.file.edit(path) };
+		}
+		const fields = Object.entries(parseFields(decoded));
+		return {
+			name,
+			summary: formatValue(fields.length),
+			children: () => fields.map(([field, value]) => this.fieldEntry(field, value, [...path, field])),
+		};
+	}
+
+	public write(path: string): void {
+		this.file.write(path);
+	}
+}
+
+/** Adds a line to `meta.dat` for a copy of a slot, which is how the game lists it */
+function copySlotInfo(directory: string, from: number, to: number): void {
+	const path = join(directory, 'meta.dat');
+	if (!existsSync(path)) return;
+	const lines = readFileSync(path, 'utf8').split('\n');
+	const line = lines.find(line => line.startsWith(`${from}:`));
+	if (!line) return;
+	const last = lines.findLastIndex(line => line.trim());
+	lines.splice(last + 1, 0, `${to}:${line.slice(`${from}:`.length)}`);
+	writeFileSync(path, lines.join('\n'));
 }
 
 export const inspector: Inspector = {
@@ -185,4 +221,14 @@ export const inspector: Inspector = {
 		}
 	},
 	open: path => new PlagueInspection(path),
+	copy(path) {
+		const directory = dirname(path);
+		const from = Number(fileNamePattern.exec(basename(path))?.[1]);
+		const numbers = readdirSync(directory).map(name => Number(fileNamePattern.exec(name)?.[1] ?? 0));
+		const to = Math.max(0, ...numbers) + 1;
+		const target = join(directory, `save_${to}.dat`);
+		copySave(path, target, [join(directory, `save_${from}.png`)]);
+		copySlotInfo(directory, from, to);
+		return target;
+	},
 };

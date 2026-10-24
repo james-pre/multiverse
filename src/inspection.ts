@@ -127,7 +127,8 @@ export function* sectionLines(section: Section, rows: Row[]): Generator<string> 
 		for (const row of rows) {
 			const value = row.value === undefined ? '' : `: ${row.value}`;
 			const detail = row.detail ? ` (${row.detail})` : '';
-			yield `${indent}${row.label}${value}${detail}`;
+			const edit = !row.edit ? '' : row.edit.safe ? ' [editable]' : ' [editable with --expert]';
+			yield `${indent}${row.label}${value}${detail}${edit}`;
 			if (row.rows) yield* visit(row.rows, indent + '\t');
 		}
 	};

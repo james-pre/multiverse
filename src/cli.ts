@@ -9,7 +9,8 @@ import { Archive, autoArchive } from './archive.js';
 import { defaultDataDirectory, installEntry, uninstallEntry, uninstallPackage } from './desktop.js';
 import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
 import { text } from './i18n.js';
-import { entryLines, sectionLines } from './inspection.js';
+import { parseEditValue } from './editing.js';
+import { entryLines, sectionLines, type Inspection, type Row } from './inspection.js';
 import type { Save } from './save.js';
 import { settings } from './settings.js';
 import { Timeline } from './timeline.js';
@@ -38,6 +39,20 @@ function locate(options: ScanOptions): SaveLocation[] {
 /** The saves at a location, including archived ones for games whose saves can be archived */
 function scan({ game, directory }: SaveLocation): Save[] {
 	return game.archive ? new Archive({ game, directory }).scan() : game.scan(directory);
+}
+
+/** Finds a row by its section and the labels of it and the rows it is under, like `character/Unspent points/Attribute points` */
+function findRow(inspection: Inspection, path: string): Row {
+	const [section, ...labels] = path.split('/');
+	let rows = inspection.section(section);
+	let row: Row | undefined;
+	for (const label of labels) {
+		row = rows.find(row => row.label.toLowerCase() == label.toLowerCase());
+		if (!row) throw new Error(`No row ${label} in ${path}. There are: ${rows.map(row => row.label).join(', ')}`);
+		rows = row.rows ?? [];
+	}
+	if (!row) throw new Error(`${path} is a section, not a row`);
+	return row;
 }
 
 function printTimeline(game: Game, timeline: Timeline): void {
@@ -109,6 +124,9 @@ cli.command('inspect')
 	.option('--depth <levels>', 'How many levels of the contents to show', Number, 3)
 	.option('--items <count>', 'How many children of each value in the contents to show', Number, 10)
 	.option('--decompressed <path>', 'Also write the save data without compression to a file')
+	.option('--set <changes...>', 'Change rows, like `money/Bank balance=1000`, and write the save to a copy')
+	.option('--expert', 'Allow changing values that are more likely to break the save')
+	.option('--in-place', 'Write changes over the save instead of to a copy')
 	.action((path, sections, options) => {
 		const game = options.game
 			? getGame(options.game)
@@ -125,6 +143,22 @@ cli.command('inspect')
 		}
 
 		const inspection = inspector.open(path);
+		if (options.set) {
+			if (!inspection.write || !inspector.copy) io.exit(`${game.name} saves can not be changed`);
+			for (const change of options.set) {
+				const separator = change.indexOf('=');
+				if (separator == -1) io.exit(`Expected a change like section/Row=value, not ${change}`);
+				const row = findRow(inspection, change.slice(0, separator));
+				if (!row.edit) io.exit(`${row.label} can not be changed`);
+				if (!row.edit.safe && !options.expert) io.exit(`Changing ${row.label} needs --expert`);
+				row.edit.set(parseEditValue(row.edit, change.slice(separator + 1)));
+			}
+			io.warn('Editing a save can corrupt it, or break the game in ways that only show up later.');
+			const target = options.inPlace ? path : inspector.copy(path);
+			inspection.write(target);
+			io.log('Saved the changes to', target);
+			return;
+		}
 		if (options.contents) {
 			const lines = entryLines(inspection.contents(), { depth: options.depth, items: options.items });
 			for (const line of lines) io.log(line);

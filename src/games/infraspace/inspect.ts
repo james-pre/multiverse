@@ -1,9 +1,12 @@
-import { basename } from 'node:path';
+import { existsSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join } from 'node:path';
+import { copySave, type EditOptions } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
+import type { JsonDocument } from '../../json.js';
 import type { Inspector } from '../index.js';
-import { isSave, readWhole, type Header } from './save-file.js';
+import { isSave, openSave, type Header } from './save-file.js';
 
 const sections = {
 	city: { title: text('infraspace.section.city.title'), description: text('infraspace.section.city.description') },
@@ -39,10 +42,20 @@ function primitive(value: unknown): string {
 
 class InfraSpaceInspection implements Inspection {
 	protected readonly header: Header;
+	protected readonly head: string;
+	protected readonly document: JsonDocument;
 	protected readonly body: Body;
 
 	public constructor(protected readonly path: string) {
-		({ header: this.header, body: this.body } = readWhole(path));
+		({ header: this.header, head: this.head, body: this.document } = openSave(path));
+		this.body = object(this.document.value);
+	}
+
+	/** A value of the body, by the objects it is in, with an edit if it has no members */
+	protected field(path: string[], options?: EditOptions): Pick<Row, 'value' | 'edit'> {
+		const container = path.slice(0, -1).reduce((value, key) => object(value[key]), this.body);
+		const key = path.at(-1)!;
+		return { value: primitive(container[key]), edit: this.document.edit(container, key, options) };
 	}
 
 	protected city(): Row[] {
@@ -61,13 +74,17 @@ class InfraSpaceInspection implements Inspection {
 			},
 			{ label: text('infraspace.row.play_time'), value: hoursAndMinutes(Number(body.totalPlayTime)) },
 			{ label: text('infraspace.row.game_time'), value: hoursAndMinutes(Number(body.totalGameTime)) },
-			{ label: text('infraspace.row.city_level'), value: primitive(population.cityLevel) },
+			{
+				label: text('infraspace.row.city_level'),
+				...this.field(['populationManager', 'cityLevel'], { minimum: 0 }),
+			},
 			{ label: text('infraspace.row.habitat_level'), value: primitive(population.avgHabitatLevel) },
 			{
 				label: text('infraspace.row.immigrants'),
+				...this.field(['populationManager', 'waitingImmigrants'], { minimum: 0 }),
 				value: primitive(Math.floor(Number(population.waitingImmigrants))),
 			},
-			{ label: text('infraspace.row.goal'), value: primitive(object(body.goalManager).currentGoalIndex) }
+			{ label: text('infraspace.row.goal'), ...this.field(['goalManager', 'currentGoalIndex'], { minimum: 0 }) }
 		);
 		if (Array.isArray(story) && story.length) {
 			rows.push({
@@ -80,9 +97,9 @@ class InfraSpaceInspection implements Inspection {
 	}
 
 	protected resources(): Row[] {
-		return Object.entries(object(this.body.resources)).map(([name, amount]) => ({
+		return Object.keys(object(this.body.resources)).map(name => ({
 			label: humanize(name),
-			value: primitive(amount),
+			...this.field(['resources', name], { safe: true, minimum: 0 }),
 		}));
 	}
 
@@ -137,8 +154,12 @@ class InfraSpaceInspection implements Inspection {
 		return {
 			name: basename(this.path),
 			summary: '',
-			children: () => [valueEntry('header', header), valueEntry('save', this.body)],
+			children: () => [valueEntry('header', header), this.document.entry('save')],
 		};
+	}
+
+	public write(path: string): void {
+		writeFileSync(path, this.head + this.document.toString());
 	}
 }
 
@@ -146,4 +167,11 @@ export const inspector: Inspector = {
 	sections,
 	recognizes: isSave,
 	open: path => new InfraSpaceInspection(path),
+	copy(path) {
+		const name = basename(path, '.sav');
+		let target = join(dirname(path), `${name} copy.sav`);
+		for (let i = 2; existsSync(target); i++) target = join(dirname(path), `${name} copy ${i}.sav`);
+		copySave(path, target);
+		return target;
+	},
 };

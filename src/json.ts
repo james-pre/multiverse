@@ -11,8 +11,10 @@ const numberPattern = /-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/y;
 
 const whitespace = new Set([0x20, 0x09, 0x0a, 0x0d]);
 
-function stringify(value: EditValue): string {
-	return typeof value == 'bigint' ? value.toString() : JSON.stringify(value);
+/** Formats a value for the text, writing whole numbers with a decimal point if the value it replaces had one */
+function stringify(value: EditValue, source: string): string {
+	const text = typeof value == 'bigint' ? value.toString() : JSON.stringify(value);
+	return /^-?\d+\./.test(source) && /^-?\d+$/.test(text) ? `${text}.0` : text;
 }
 
 /**
@@ -174,7 +176,7 @@ export class JsonDocument {
 			set: value => {
 				value = checkEditValue(edit, value);
 				Reflect.set(container, key, value);
-				this.replacements.set(span.start, { end: span.end, text: stringify(value) });
+				this.replacements.set(span.start, { end: span.end, text: stringify(value, source) });
 				this.isChanged = true;
 			},
 		};
