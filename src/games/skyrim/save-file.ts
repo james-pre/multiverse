@@ -1,7 +1,7 @@
 import type { InstanceOf } from 'memium';
 import { closeSync, openSync, readSync } from 'node:fs';
 import { inflateSync } from 'node:zlib';
-import { decompressBlock } from '../../lz4.js';
+import { decompressLZ4 } from '../../compression.js';
 import type { Pixels } from '../../save.js';
 import { CompressionType, SaveBody, SaveHeader } from './structs.js';
 import { decodeUTF8 } from 'utilium';
@@ -77,7 +77,7 @@ export class SaveFile {
 			case CompressionType.LZ4: {
 				// LZ4 expands incompressible data by under 1%, so this much input always covers the limit.
 				const stored = Math.min(this.storedBodySize, Math.ceil(limit * 1.01) + 16);
-				return decompressBlock(readRange(this.path, this.bodyOffset, stored), this.bodySize, limit);
+				return decompressLZ4(readRange(this.path, this.bodyOffset, stored), this.bodySize, limit);
 			}
 			default:
 				throw new Error(`Unknown compression: ${String(this.header.compressionType)}`);

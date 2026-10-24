@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { decompressBlock } from '../../lz4.js';
+import { decompressLZ4 } from '../../compression.js';
 import { readFactsTable } from './facts.js';
 import { Package } from './package.js';
 import { Reader } from './reader.js';
@@ -128,7 +128,7 @@ export class SaveFile {
 			const reader = new Reader(this.file.subarray(chunk.offset, chunk.offset + chunk.compressedSize));
 			if (reader.magic() != 'XLZ4') throw new Error(`Chunk at ${chunk.offset} is not LZ4`);
 			const size = reader.u32();
-			data.set(decompressBlock(reader.bytes(reader.remaining), size), position);
+			data.set(decompressLZ4(reader.bytes(reader.remaining), size), position);
 			position += size;
 		}
 		this.decompressed = data;
