@@ -107,10 +107,15 @@ suite('infraspace', () => {
 	test('inspect shows the header, city, research and contents', () => {
 		const path = join(directory, 'InfraSpace 1.56.460', 'Kurai v2.sav');
 		assert.ok(inspector.recognizes(path));
-		const lines = [...inspector.inspect(path, new Set(Object.keys(inspector.sections)))];
-		assert.ok(lines.includes('\tmap: BiomesWorld'));
-		assert.ok(lines.includes('\tcityLevel: 3'));
-		assert.ok(lines.includes('\ttrains: 200'));
-		assert.ok(lines.includes('\tbuildings: 100'));
+		const inspection = inspector.open(path);
+		const city = inspection.section('city');
+		assert.ok(city.some(row => row.label == 'Map' && row.value == 'BiomesWorld'));
+		assert.ok(city.some(row => row.label == 'City level' && row.value == '3'));
+		const researched = inspection.section('research').find(row => row.label == 'Researched');
+		assert.deepEqual(
+			researched?.rows?.map(row => row.label),
+			['Farming', 'Trains']
+		);
+		assert.ok(inspection.section('contents').some(row => row.label == 'Buildings' && row.value == '100'));
 	});
 });

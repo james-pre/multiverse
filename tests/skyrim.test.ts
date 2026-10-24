@@ -143,11 +143,14 @@ suite('skyrim', () => {
 		assert.deepEqual(Array.from(save.screenshot().data), [255, 0, 0, 255, 0, 0, 255, 255]);
 	});
 
-	test('inspect shows the header and plugins', () => {
+	test('inspect shows the character and plugins', () => {
 		const path = skyrim.scan(directory).find(save => save.name == 'Save 1')!.path;
 		assert.ok(inspector.recognizes(path));
-		const lines = [...inspector.inspect(path, new Set(['header', 'plugins']))].join('\n');
-		assert.match(lines, /Wozim/);
-		assert.match(lines, /Skyrim\.esm/);
+		const inspection = inspector.open(path);
+		assert.ok(inspection.section('character').some(row => row.label == 'Name' && row.value == 'Wozim'));
+		assert.deepEqual(
+			inspection.section('plugins').map(row => row.label),
+			['Skyrim.esm']
+		);
 	});
 });

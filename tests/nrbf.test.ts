@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
+import { entryLines } from '../src/inspection.js';
 import * as nrbf from '../src/nrbf.js';
 
 /** A 32-bit float member, since other numbers are written as 32-bit integers */
@@ -161,7 +162,7 @@ suite('nrbf', () => {
 		assert.equal(nrbf.shortTypeName(name), 'Dictionary<Int32, Data+Entry>');
 	});
 
-	test('dump shows lists, enums and shortened arrays', () => {
+	test('entry shows lists as their items and enums by their values', () => {
 		const list = {
 			[nrbf.className]:
 				'System.Collections.Generic.List`1[[System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089]]',
@@ -173,21 +174,27 @@ suite('nrbf', () => {
 			[nrbf.className]: 'Test.Root',
 			mode: { [nrbf.className]: 'Test.Mode', value__: 1 },
 			ids: list,
-			points: [point(1, 2), point(3, 4), point(5, 6)],
+			points: [point(1, 2), point(3, 4), point(5, 6), point(7, 8)],
 		};
 		assert.deepEqual(
-			[...nrbf.dump('Root', nrbf.parse(serialize(root)), { items: 1 })],
+			[...entryLines(nrbf.entry('Root', nrbf.parse(serialize(root))), { items: 3 })],
 			[
 				'Root: Root',
 				'\tmode: Mode(1)',
 				'\tids: List<Int32>(2)',
 				'\t\t0: 4',
-				'\t\t… 1 more',
-				'\tpoints: Point[3]',
+				'\t\t1: 5',
+				'\tpoints: Point[4]',
 				'\t\t0: Point',
 				'\t\t\tx: 1',
 				'\t\t\ty: 2',
-				'\t\t… 2 more',
+				'\t\t1: Point',
+				'\t\t\tx: 3',
+				'\t\t\ty: 4',
+				'\t\t2: Point',
+				'\t\t\tx: 5',
+				'\t\t\ty: 6',
+				'\t\t… 1 more',
 			]
 		);
 	});

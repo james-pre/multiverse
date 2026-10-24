@@ -95,10 +95,17 @@ suite('diplomacy is not an option', () => {
 		const path = join(directory, 'Lord', 'Grrr');
 		assert.ok(inspector.recognizes(path));
 		assert.ok(inspector.recognizes(`${path}.dat`));
-		const lines = [...inspector.inspect(`${path}.dat`, new Set(['session', 'research', 'entities']))];
-		assert.ok(lines.includes('\tplay time: 20:00'));
-		assert.ok(lines.includes('\tenemies killed: 50'));
-		assert.ok(lines.includes('\tbuildings (3): 1, 2, 3'));
-		assert.ok(lines.includes('\tcitizens: 3'));
+		const inspection = inspector.open(`${path}.dat`);
+		assert.deepEqual(
+			inspection.section('session').find(row => row.label == 'Enemies killed'),
+			{ label: 'Enemies killed', value: '50' }
+		);
+		const [buildings] = inspection.section('research');
+		assert.equal(buildings.value, '3');
+		assert.deepEqual(
+			buildings.rows?.map(row => row.label),
+			['1', '2', '3']
+		);
+		assert.ok(inspection.section('entities').some(row => row.label == 'Citizens' && row.value == '3'));
 	});
 });

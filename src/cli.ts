@@ -4,7 +4,7 @@ import { writeFileSync } from 'node:fs';
 import { styleText } from 'node:util';
 import $pkg from '../package.json' with { type: 'json' };
 import { duration } from 'utilium/format';
-import { defaultDataDirectory, installEntry, uninstallEntry } from './desktop.js';
+import { defaultDataDirectory, installEntry, uninstallEntry, uninstallPackage } from './desktop.js';
 import { findSaveDirectories, games, getGame, type Game, type SaveLocation } from './games/index.js';
 import { text } from './i18n.js';
 import { entryLines, sectionLines } from './inspection.js';
@@ -119,13 +119,13 @@ cli.command('gui', { isDefault: true })
 		gui.run(location);
 	});
 
-const dataDirectoryOption = new Option('--data-directory <path>', 'Where to link them').default(
-	defaultDataDirectory(),
-	'system-wide as root, otherwise your user'
-);
+const dataDirectoryOption = new Option(
+	'--data-directory <path>',
+	'Where the launcher entry goes: a data directory on Linux, or a Start Menu folder on Windows'
+).default(defaultDataDirectory(), 'system-wide as root, otherwise your user');
 
 cli.command('install')
-	.description('Add the desktop entry and icon, so the app shows up in launchers')
+	.description('Make the app show up in launchers, with a desktop entry on Linux or a Start Menu shortcut on Windows')
 	.addOption(dataDirectoryOption)
 	.option('--global-only', 'Only install during a global npm install, and warn instead of failing')
 	.action(options => {
@@ -134,19 +134,21 @@ cli.command('install')
 			return;
 		}
 
-		if (process.env.npm_config_global !== 'true' || process.platform != 'linux') return;
+		if (process.env.npm_config_global !== 'true' || !['linux', 'win32'].includes(process.platform)) return;
 		try {
 			installEntry(options.dataDirectory);
 		} catch (error) {
-			io.warn('Could not install the desktop entry:', io.errorText(error));
+			io.warn('Could not add the app to launchers:', io.errorText(error));
 		}
 	});
 
 cli.command('uninstall')
-	.description('Remove the desktop entry and icon')
+	.description('Remove the app from launchers')
 	.addOption(dataDirectoryOption)
+	.option('--package', 'Also uninstall the npm package, as uninstalling from Windows does')
 	.action(options => {
 		for (const path of uninstallEntry(options.dataDirectory)) io.log('Removed', path);
+		if (options.package) uninstallPackage();
 	});
 
 export default cli;
