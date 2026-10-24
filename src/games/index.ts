@@ -28,6 +28,20 @@ export interface Inspector {
 	decompress?(path: string): Uint8Array;
 }
 
+/**
+ * How a game that saves over its saves keeps them in slots, so copies can be archived and put back.
+ * A slot is the name of a save's file or folder in the save directory.
+ */
+export type ArchiveSupport =
+	| {
+			/** For games with a fixed number of slots, each of which holds one save */
+			slots: string[];
+	  }
+	| {
+			/** A slot with nothing in it, for putting back a save whose slot holds a different save */
+			freeSlot(directory: string): string;
+	  };
+
 export interface Game {
 	id: string;
 	name: string;
@@ -38,6 +52,8 @@ export interface Game {
 	describe(timeline: Timeline): string;
 	actions: SaveAction[];
 	inspector?: Inspector;
+	/** Set for games that save over existing saves, so they can be archived */
+	archive?: ArchiveSupport;
 }
 
 export const games = new Map<string, Game>(

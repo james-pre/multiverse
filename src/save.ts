@@ -33,4 +33,10 @@ export interface Save {
 	counters?: Readonly<Record<string, number>>;
 	/** Game-specific values shown alongside the save */
 	details: Record<string, string | number | boolean>;
+	/** The name of the save's file or folder in the game's save directory, for games whose saves can be archived */
+	slot?: string;
+	/** Whether the save is in the game's save directory, rather than only in the archive */
+	inGame?: boolean;
+	/** The folder of the save's copy in the archive */
+	archived?: string;
 }
