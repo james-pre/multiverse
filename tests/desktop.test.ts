@@ -5,14 +5,14 @@ import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { installEntry, uninstallEntry } from '../src/desktop.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
+const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 test('installEntry links the desktop entry and icon, and uninstallEntry removes them', () => {
 	const linked = installEntry(directory);
 	assert.equal(linked.length, 2);
 	for (const path of linked) assert.ok(lstatSync(path).isSymbolicLink());
-	assert.match(readlinkSync(linked[0]), /data\/dev\.jamespre\.SaveTimeline\.desktop$/);
+	assert.match(readlinkSync(linked[0]), /data\/dev\.jamespre\.Multiverse\.desktop$/);
 
 	assert.deepEqual(installEntry(directory), linked);
 	assert.deepEqual(uninstallEntry(directory), linked);

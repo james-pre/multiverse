@@ -21,7 +21,7 @@ export interface Resource extends nrbf.Instance {
 	valueContainer: { value: number; dailyIncrease: number; dailyDecrease: number };
 }
 
-/** The members of `Utility.SaveContainer`, the root of a save, that save-timeline uses */
+/** The members of `Utility.SaveContainer`, the root of a save, that save-multiverse uses */
 export interface SaveContainer extends nrbf.Instance {
 	saveVersion: number;
 	mapSeed: number;

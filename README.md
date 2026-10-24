@@ -1,4 +1,4 @@
-# Save Timeline
+# Multiverse
 
 View game saves as branching timelines. Each playthrough is a tree, with saves as nodes placed by play time, and the tree splits wherever you loaded an older save and played on from it.
 
@@ -11,23 +11,23 @@ Supported games:
 
 ## Installation
 
-Save Timeline needs GTK 4 and libadwaita. Either download `save-timeline-linux-x64` from the [latest release](https://github.com/james-pre/save-timeline/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
+Multiverse needs GTK 4 and libadwaita. Either download `save-multiverse-linux-x64` from the [latest release](https://github.com/james-pre/save-multiverse/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
 
 ```sh
-sudo npm i -g @james-pre/save-timeline --allow-scripts=@james-pre/save-timeline
+sudo npm i -g @james-pre/save-multiverse --allow-scripts=@james-pre/save-multiverse
 ```
 
-npm only runs the install script, which adds a desktop entry and icon so Save Timeline shows up in your launcher, if `--allow-scripts` covers the package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
+npm only runs the install script, which adds a desktop entry and icon so Multiverse shows up in your launcher, if `--allow-scripts` covers the package. To install from a local clone, allow it by its path instead (e.g. `--allow-scripts=$PWD`), since npm only matches package names for packages from the registry.
 
-`save-timeline install` and `save-timeline uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
+`save-multiverse install` and `save-multiverse uninstall` manage the desktop entry yourself, for example with `--data-directory ~/.local/share`. The downloaded executable copies the entry, pointing it at wherever the executable is, instead of linking it.
 
 ## Usage
 
 ```sh
-save-timeline                    # open the viewer, starting with a game picker
-save-timeline --game cyberpunk   # open a game's timelines directly
-save-timeline tree               # print the timelines of every game with saves
-save-timeline inspect <save>     # show what is in a save file
+save-multiverse                    # open the viewer, starting with a game picker
+save-multiverse --game cyberpunk   # open a game's timelines directly
+save-multiverse tree               # print the timelines of every game with saves
+save-multiverse inspect <save>     # show what is in a save file
 ```
 
 Saves are found through Steam, including every library in `libraryfolders.vdf` and Proton prefixes on Linux. Both commands take `--game <id>` with `--directory <path>` for saves somewhere else. `inspect` recognizes the game from the file, and takes the sections to show (by default all of them, e.g. `header plugins globals changes` for Skyrim). An unknown section lists the ones the game has. For Skyrim, `--decompressed <path>` writes the save's data without compression for other tools.
@@ -53,6 +53,6 @@ The viewer uses GTK 4 and libadwaita on Node through [girbind](https://github.co
 
 UI text is in `locales/`, using [`@james-pre/locales`](https://www.npmjs.com/package/@james-pre/locales). `build` and `lint` generate the types for its keys into `src/.locale.ts`.
 
-`npm run build:sea` builds `build/save-timeline-linux-x64` with [xsea](https://github.com/james-pre/xsea).
+`npm run build:sea` builds `build/save-multiverse-linux-x64` with [xsea](https://github.com/james-pre/xsea).
 
 Releases are published to npm by CI, with the bindings prebuilt on Fedora, and the executable is attached to the GitHub release.

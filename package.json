@@ -1,5 +1,5 @@
 {
-	"name": "@james-pre/save-timeline",
+	"name": "@james-pre/save-multiverse",
 	"version": "0.0.0",
 	"description": "View game saves as branching timelines",
 	"type": "module",
@@ -7,17 +7,17 @@
 	"license": "LGPL-3.0-or-later",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/james-pre/save-timeline.git"
+		"url": "git+https://github.com/james-pre/save-multiverse.git"
 	},
-	"homepage": "https://github.com/james-pre/save-timeline",
+	"homepage": "https://github.com/james-pre/save-multiverse",
 	"bugs": {
-		"url": "https://github.com/james-pre/save-timeline/issues"
+		"url": "https://github.com/james-pre/save-multiverse/issues"
 	},
 	"engines": {
 		"node": ">= 22"
 	},
 	"bin": {
-		"save-timeline": "dist/main.js"
+		"save-multiverse": "dist/main.js"
 	},
 	"files": [
 		"dist",

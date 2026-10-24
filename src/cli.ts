@@ -51,7 +51,7 @@ function printTimeline(game: Game, timeline: Timeline): void {
 const gameOption = new Option('-g, --game <id>', 'Game the saves are from').choices([...games.keys()]);
 const directoryOption = new Option('-d, --directory <path>', 'Directory containing the saves, with --game');
 
-const cli = new Command('save-timeline').version($pkg.version).description($pkg.description).showHelpAfterError();
+const cli = new Command('save-multiverse').version($pkg.version).description($pkg.description).showHelpAfterError();
 
 cli.command('tree')
 	.description('Print the inferred timelines')

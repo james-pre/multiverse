@@ -20,7 +20,7 @@ export function run(location?: SaveLocation): void {
 	// Without the portal, libadwaita reads the color scheme from GSettings instead.
 	if (!canUsePortal()) process.env.ADW_DISABLE_PORTAL = '1';
 
-	const app = new Adw.Application('dev.jamespre.SaveTimeline', Gio.ApplicationFlags.default_flags);
+	const app = new Adw.Application('dev.jamespre.Multiverse', Gio.ApplicationFlags.default_flags);
 
 	let main: MainWindow | undefined;
 

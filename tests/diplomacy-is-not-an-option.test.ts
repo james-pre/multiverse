@@ -9,7 +9,7 @@ import * as nrbf from '../src/nrbf.js';
 import { Timeline } from '../src/timeline.js';
 import { serialize, Single } from './nrbf.test.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
+const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 mkdirSync(join(directory, 'Lord'));
 

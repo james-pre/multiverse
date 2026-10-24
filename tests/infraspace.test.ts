@@ -8,7 +8,7 @@ import { inspector } from '../src/games/infraspace/inspect.js';
 import { objectAfter, parseDate } from '../src/games/infraspace/save-file.js';
 import { Timeline } from '../src/timeline.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
+const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 interface SaveOptions {

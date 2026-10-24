@@ -6,7 +6,7 @@ import { after, suite, test } from 'node:test';
 import { convertToManual, cyberpunk } from '../src/games/cyberpunk/index.js';
 import { parseTimestamp } from '../src/games/cyberpunk/metadata.js';
 
-const directory = mkdtempSync(join(tmpdir(), 'save-timeline-'));
+const directory = mkdtempSync(join(tmpdir(), 'save-multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 function writeSave(name: string, playthroughTime: number): void {

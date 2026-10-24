@@ -4,7 +4,7 @@ import globals from 'globals';
 import { defineConfig } from 'eslint/config';
 
 export default defineConfig({
-	name: 'save-timeline',
+	name: 'save-multiverse',
 	extends: [eslint.configs.recommended, ...tseslint.configs.recommendedTypeChecked],
 	files: ['src/**/*.ts'],
 	languageOptions: {
