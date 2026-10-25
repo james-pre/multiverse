@@ -484,7 +484,10 @@
 		"slot": "Slot {number}",
 		"mode": {
 			"unknown": "Mode {mode}",
-			"0": "Survival"
+			"0": "Survival",
+			"2": "Freedom",
+			"257": "Hardcore",
+			"1790": "Creative"
 		},
 		"build": {
 			"basePresent": "Base",
@@ -496,6 +499,48 @@
 		"detail": {
 			"started": "Started",
 			"build": "Game build"
+		},
+		"section": {
+			"game": {
+				"title": "Game",
+				"description": "Mode, play time and the day in the game"
+			},
+			"player": {
+				"title": "Player",
+				"description": "Health, food, water and what the player has learned"
+			},
+			"world": {
+				"title": "World",
+				"description": "What has been built and placed in the world"
+			}
+		},
+		"row": {
+			"mode": "Game mode",
+			"play_time": "Play time",
+			"started": "Started",
+			"saved": "Saved",
+			"day": "Day",
+			"seconds": "{seconds} seconds in",
+			"build": "Game build",
+			"health": "Health",
+			"food": "Food",
+			"water": "Water",
+			"oxygen": "Oxygen",
+			"infection": "Infection",
+			"blueprints": "Blueprints known",
+			"scanned": "Things scanned",
+			"journal": "PDA log entries",
+			"encyclopedia": "Databank entries",
+			"objects": "Saved objects"
+		},
+		"built": {
+			"bases": "Bases",
+			"constructed": "Constructed pieces",
+			"beacons": "Beacons",
+			"storage": "Storage containers",
+			"power": "Power sources",
+			"creatures": "Creatures in containment",
+			"plants": "Grown plants"
 		}
 	},
 	"editor": {

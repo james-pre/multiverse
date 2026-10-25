@@ -6,8 +6,8 @@ import { shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';
 import type { Game } from '../index.js';
-
-const folderPattern = /^slot(\d+)$/;
+import { inspector } from './inspect.js';
+import { folderPattern, freeSlot, modeName } from './slots.js';
 
 /** A slot's `gameinfo.json` */
 interface GameInfo {
@@ -35,10 +35,6 @@ function readGameInfo(path: string): GameInfo {
 	return JSON.parse(json, (key, value: unknown, context?: { source: string }) =>
 		key.endsWith('Ticks') && context ? context.source : value
 	) as GameInfo;
-}
-
-export function modeName(mode: number): string {
-	return text(`subnautica.mode.${mode}`, { $default: text('subnautica.mode.unknown', { mode }) });
 }
 
 const startOf = new WeakMap<Save, Temporal.PlainDateTime>();
@@ -80,12 +76,8 @@ export const subnautica: Game = {
 	id: 'subnautica',
 	name: 'Subnautica',
 	steam: { id: 264710, saves: 'SNAppData/SavedGames', installed: true },
-	archive: {
-		freeSlot(directory) {
-			const used = readdirSync(directory).map(name => Number(folderPattern.exec(name)?.[1] ?? -1));
-			return `slot${String(Math.max(-1, ...used) + 1).padStart(4, '0')}`;
-		},
-	},
+	archive: { freeSlot },
+	inspector,
 	describe(timeline) {
 		const latest = timeline.nodes.at(-1)!.save;
 		return text('subnautica.playthrough', { mode: latest.label, started: shortDate(startOf.get(latest)!) });
