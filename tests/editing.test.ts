@@ -7,6 +7,7 @@ import {
 	binaryEdit,
 	choiceLabel,
 	copySave,
+	editText,
 	linkedEdit,
 	Locations,
 	namedChoices,
@@ -21,6 +22,15 @@ const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
 
 suite('editing', () => {
+	test('editText shows 32-bit floats as the shortest text that reads back as them', () => {
+		assert.equal(editText(Math.fround(99.99665)), '99.99665');
+		assert.equal(editText(Math.fround(0.1)), '0.1');
+		assert.equal(editText(0.1), '0.1');
+		assert.equal(editText(1 / 3), String(1 / 3));
+		assert.equal(editText(12), '12');
+		assert.equal(editText(5n), '5');
+	});
+
 	test('parseEditValue parses by the type of the current value and checks limits', () => {
 		const number: Edit = { value: 5, integer: true, minimum: 0, maximum: 10, set() {} };
 		assert.equal(parseEditValue(number, ' 7 '), 7);

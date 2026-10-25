@@ -48,6 +48,16 @@ function checkRange(edit: Edit, value: number | bigint): void {
 		throw new RangeError(`The highest value is ${edit.maximum}`);
 }
 
+/** A value as text to edit, with floats as the shortest text that reads back as the same 32-bit float */
+export function editText(value: EditValue): string {
+	if (typeof value != 'number' || Number.isInteger(value) || Math.fround(value) !== value) return String(value);
+	for (let precision = 1; precision < 9; precision++) {
+		const text = String(Number(value.toPrecision(precision)));
+		if (Math.fround(Number(text)) === value) return text;
+	}
+	return String(value);
+}
+
 /** Parses text as a value for `edit`, throwing if it isn't one the edit takes */
 export function parseEditValue(edit: Edit, input: string): EditValue {
 	const text = input.trim();

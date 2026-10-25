@@ -6,7 +6,7 @@ import * as Gio from '../../native/gio.js';
 import * as Gtk from '../../native/gtk.js';
 import * as Pango from '../../native/pango.js';
 import type { Archive } from '../archive.js';
-import { choiceLabel, parseEditValue, type Edit, type EditValue } from '../editing.js';
+import { choiceLabel, editText, parseEditValue, type Edit, type EditValue } from '../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../format.js';
 import type { Inspector } from '../games/index.js';
 import { text } from '../i18n.js';
@@ -90,7 +90,7 @@ class ValueEditor extends Gtk.Stack {
 		}
 
 		this.entry = new Gtk.Entry();
-		this.entry.setText(String(edit.value));
+		this.entry.setText(editText(edit.value));
 		this.entry.setWidthChars(typeof edit.value == 'string' ? 24 : 14);
 		if (typeof edit.value != 'string') this.entry.setAlignment(1);
 		this.entry.setValign(Gtk.Align.center);
@@ -114,7 +114,7 @@ class ValueEditor extends Gtk.Stack {
 
 	protected commitText(): void {
 		const input = this.entry!.getText();
-		if (input == String(this.edit.value)) return;
+		if (input == editText(this.edit.value)) return;
 		try {
 			this.commit(parseEditValue(this.edit, input));
 		} catch (error) {
