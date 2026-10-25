@@ -240,7 +240,8 @@ class SubnauticaInspection implements Inspection {
 				...object.components.map(component => ({
 					name: component.type,
 					summary: component.isEnabled ? '' : 'disabled',
-					children: () => messageEntries(file.data, component.start, component.end, fieldNames[component.type]),
+					children: () =>
+						messageEntries(file.data, component.start, component.end, fieldNames[component.type]),
 				})),
 			],
 		};
@@ -285,8 +286,7 @@ class SubnauticaInspection implements Inspection {
 
 export const inspector: Inspector = {
 	sections,
-	recognizes: path =>
-		existsSync(path) && statSync(path).isDirectory() && existsSync(join(path, 'scene-objects.bin')),
+	recognizes: path => existsSync(path) && statSync(path).isDirectory() && existsSync(join(path, 'scene-objects.bin')),
 	open: path => new SubnauticaInspection(path),
 	copy(path) {
 		const target = join(dirname(path), freeSlot(dirname(path)));

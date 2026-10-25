@@ -77,7 +77,12 @@ class Stream {
 		for (let i = 0; i < count; i++) {
 			const header = this.message();
 			const { start, end } = this.span();
-			object.components.push({ type: lastText(header, 1) ?? '', isEnabled: lastNumber(header, 2) != 0, start, end });
+			object.components.push({
+				type: lastText(header, 1) ?? '',
+				isEnabled: lastNumber(header, 2) != 0,
+				start,
+				end,
+			});
 		}
 		return object;
 	}
