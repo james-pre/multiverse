@@ -35,10 +35,10 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"lint": "locales-typegen && tsc -p tsconfig.json --noEmit && tsc -p src/gui/tsconfig.json --noEmit && eslint src",
-		"build": "locales-typegen && tsc -p tsconfig.json && tsc -p src/gui/tsconfig.json",
+		"build": "locales-typegen && girbind build && tsc -p tsconfig.json && tsc -p src/gui/tsconfig.json",
 		"test": "tsx --test tests/*.test.ts",
 		"build:native": "girbind build",
-		"postinstall": "node dist/main.js install --global-only",
+		"postinstall": "node -e \"process.env.npm_config_global === 'true' && import('./dist/main.js')\" install --global-only",
 		"prepublishOnly": "npm run build",
 		"build:sea": "node scripts/sea.js",
 		"build:icon": "node scripts/icon.js"
