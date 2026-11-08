@@ -12,6 +12,7 @@ import { settings } from '../settings.js';
 export function menuButton(): Gtk.MenuButton {
 	const menu = new Gio.Menu();
 	menu.append(text('menu.preferences'), 'app.preferences');
+	menu.append(text('menu.about'), 'app.about');
 	const button = new Gtk.MenuButton();
 	button.setIconName('open-menu-symbolic');
 	button.setMenuModel(menu);

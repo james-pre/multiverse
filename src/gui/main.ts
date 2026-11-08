@@ -6,6 +6,7 @@ import { autoArchive } from '../archive.js';
 import { findSaveDirectories, games, type SaveLocation } from '../games/index.js';
 import { text } from '../i18n.js';
 import { settings } from '../settings.js';
+import { aboutDialog } from './about.js';
 import { preferencesDialog } from './preferences.js';
 import { MainWindow } from './window.js';
 
@@ -51,6 +52,10 @@ export function run(location?: SaveLocation): void {
 	connect(preferences, 'activate', () => preferencesDialog(setAutoArchive).present(main));
 	app.addAction(preferences);
 	app.setAccelsForAction('app.preferences', ['<Control>comma']);
+
+	const about = new Gio.SimpleAction('about', null);
+	connect(about, 'activate', () => aboutDialog().present(main));
+	app.addAction(about);
 
 	connect(app, 'activate', () => {
 		if (main) return main.present();

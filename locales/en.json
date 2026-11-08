@@ -407,7 +407,13 @@
 		}
 	},
 	"menu": {
-		"preferences": "Preferences"
+		"preferences": "Preferences",
+		"about": "About"
+	},
+	"about": {
+		"name": "Multiverse",
+		"comments": "View game saves as branching timelines\n\nBuilt {built}",
+		"copyright": "© 2026 {author}"
 	},
 	"preferences": {
 		"archive": {
