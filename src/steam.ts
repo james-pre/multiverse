@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, sep } from 'node:path';
+import * as windows from './windows.js';
 
 export interface Game {
 	/** The app ID, e.g. `1091500` */
@@ -61,7 +62,7 @@ export function roots(): string[] {
 	const home = homedir();
 	const candidates =
 		process.platform == 'win32'
-			? [join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Steam')]
+			? [windows.steamPath(), join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Steam')]
 			: process.platform == 'darwin'
 				? [join(home, 'Library/Application Support/Steam')]
 				: [
@@ -69,7 +70,11 @@ export function roots(): string[] {
 						join(home, '.steam/steam'),
 						join(home, '.var/app/com.valvesoftware.Steam/.local/share/Steam'),
 					];
-	return [...new Set(candidates.filter(path => existsSync(path)).map(path => realpathSync(path)))];
+	return [
+		...new Set(
+			candidates.filter((path): path is string => !!path && existsSync(path)).map(path => realpathSync(path))
+		),
+	];
 }
 
 export interface Library {
@@ -137,13 +142,14 @@ export function expand(path: string): string[] {
 
 /**
  * Where a Steam game could keep its saves on this machine, with libraries that have the game installed first.
+ * On Windows this follows folders like Documents that the user or OneDrive moved.
  * On Linux this is inside the game's Proton prefix, unless the game keeps its saves in Steam Cloud's folder or its install folder.
  */
 export function saveDirectories(game: Game, available: Library[] = libraries()): string[] {
 	const { id, saves } = game;
 	if (game.cloud) return cloudDirectories(game).flatMap(expand);
 	if (game.installed) return installDirectories(id, available).flatMap(folder => expand(join(folder, saves)));
-	if (process.platform == 'win32') return expand(join(homedir(), saves));
+	if (process.platform == 'win32') return expand(windows.profilePath(saves));
 
 	return available
 		.toSorted((a, b) => Number(b.apps.has(id)) - Number(a.apps.has(id)))
