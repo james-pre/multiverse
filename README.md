@@ -14,7 +14,7 @@ Supported games (Steam):
 
 ## Installation
 
-Multiverse needs GTK 4 and libadwaita. Either download `multiverse-linux-x64` from the [latest release](https://github.com/james-pre/multiverse/releases/latest), which includes Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
+On Linux, Multiverse needs GTK 4 and libadwaita. On Windows, they come with it. Either download `multiverse-linux-x64` or `multiverse-win-x64.exe` from the [latest release](https://github.com/james-pre/multiverse/releases/latest), which include Node.js, or install it with npm 12 or newer and Node.js 26 or newer:
 
 ```sh
 sudo npm i -g @james-pre/multiverse --allow-scripts=@james-pre/multiverse
@@ -74,9 +74,15 @@ The viewer uses GTK 4 and libadwaita on Node through [girbind](https://github.co
 
 UI text is in `locales/`, using [`@james-pre/locales`](https://www.npmjs.com/package/@james-pre/locales). `build` and `lint` generate the types for its keys into `src/.locale.ts`.
 
-`npm run build:sea` builds `build/multiverse-linux-x64` with [xsea](https://github.com/james-pre/xsea).
+### Windows
 
-Releases are published to npm by CI, with the bindings prebuilt on Fedora, and the executable is attached to the GitHub release.
+`npm run build:windows` cross-compiles the bindings for Windows into `native/*.win32-x64.node` with `girbind build --target win32-x64`, then puts the GTK and libadwaita DLLs they need, with icons, GSettings schemas and licenses, into `build/windows/runtime`. The libraries come from [MSYS2](https://www.msys2.org/). It needs `build:native` first, MinGW-w64 targeting UCRT (`ucrt64-gcc-c++` on Fedora) and `glib-compile-schemas`. It also works on Windows from an MSYS2 UCRT64 shell.
+
+On Windows, the app adds the runtime's `bin` folder to `PATH` before loading GTK. It finds the runtime in the `@james-pre/multiverse-win32-x64` package, which npm installs alongside Multiverse on Windows, or in `build/windows/runtime` when run from a clone.
+
+`npm run build:sea` builds `build/multiverse-linux-x64` and, after `build:windows`, `build/multiverse-win-x64.exe` with [xsea](https://github.com/james-pre/xsea).
+
+Releases are published to npm by CI, with the bindings prebuilt on Fedora and cross-compiled for Windows there. CI publishes `build/windows/runtime` as `@james-pre/multiverse-win32-x64` and makes it an optional dependency of the version it publishes. Both executables are attached to the GitHub release.
 
 To make a game's saves editable, give the `Row`s and `Entry`s its inspection shows an `edit` (see `src/editing.ts`), marking it `safe` if the value can be changed outside of expert mode, then add `write` to the inspection and `copy` to the inspector. Inspections don't parse values again to write them, so:
 

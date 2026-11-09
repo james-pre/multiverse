@@ -20,7 +20,7 @@ jobs:
             id-token: write
         steps:
             - name: Install native dependencies
-              run: dnf install -y git gh gcc-c++ cmake make pkgconf-pkg-config gtk4-devel libadwaita-devel
+              run: dnf install -y git gh gcc-c++ cmake make pkgconf-pkg-config gtk4-devel libadwaita-devel ucrt64-gcc-c++
 
             - name: Checkout
               uses: actions/checkout@v5
@@ -39,13 +39,23 @@ jobs:
                   npm run build:native
                   npm run build
 
-            - name: Publish
-              run: npm publish --access=public --provenance ${{ github.event.release.prerelease && '--tag next' || '' }}
+            - name: Build for Windows
+              run: npm run build:windows
 
-            - name: Build single executable
+            - name: Build single executables
               run: npm run build:sea
+
+            - name: Publish GTK for Windows
+              run: npm publish build/windows/runtime --access=public --provenance ${{ github.event.release.prerelease && '--tag next' || '' }}
+
+            - name: Publish
+              run: |
+                  npm pkg set "optionalDependencies.@james-pre/multiverse-win32-x64=$(npm pkg get version | tr -d '"')"
+                  npm publish --access=public --provenance ${{ github.event.release.prerelease && '--tag next' || '' }}
 
             - name: Upload release assets
               env:
                   GH_TOKEN: ${{ github.token }}
-              run: gh release upload "${{ github.event.release.tag_name }}" build/multiverse-linux-x64 --clobber --repo "$GITHUB_REPOSITORY"
+              run: >
+                  gh release upload "${{ github.event.release.tag_name }}"
+                  build/multiverse-linux-x64 build/multiverse-win-x64.exe --clobber --repo "$GITHUB_REPOSITORY"

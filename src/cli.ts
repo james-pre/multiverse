@@ -15,6 +15,7 @@ import { entryLines, sectionLines, type Inspection, type Row } from './inspectio
 import type { Save } from './save.js';
 import { settings } from './settings.js';
 import { Timeline } from './timeline.js';
+import { useGtkRuntime } from './windows.js';
 
 interface ScanOptions {
 	game?: string;
@@ -197,6 +198,7 @@ cli.command('gui', { isDefault: true })
 	.addOption(directoryOption)
 	.action(async options => {
 		const [location] = options.game ? locate(options) : [];
+		if (process.platform == 'win32') useGtkRuntime();
 		const entry = './gui/main.js';
 		const gui = (await import(entry)) as { run(location?: SaveLocation): void };
 		gui.run(location);

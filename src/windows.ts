@@ -1,6 +1,28 @@
 import { execFileSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { win32 } from 'node:path';
+import { delimiter, dirname, join, win32 } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** The package with GTK's DLLs and data for Windows, which npm installs alongside the app on Windows */
+export const runtimePackage = '@james-pre/multiverse-win32-x64';
+
+/** Where GTK's DLLs and data for Windows are: the runtime package, or one built by `npm run build:windows` */
+export function gtkRuntime(): string | undefined {
+	try {
+		return dirname(fileURLToPath(import.meta.resolve(runtimePackage + '/package.json')));
+	} catch {
+		const built = join(import.meta.dirname, '../build/windows/runtime');
+		return existsSync(built) ? built : undefined;
+	}
+}
+
+/** Lets Windows find GTK's DLLs when the bindings load */
+export function useGtkRuntime(): void {
+	const runtime = gtkRuntime();
+	if (!runtime) throw new Error(`GTK for Windows is missing; reinstall Multiverse so npm installs ${runtimePackage}`);
+	process.env.PATH = join(runtime, 'bin') + delimiter + process.env.PATH;
+}
 
 /** Parses the output of `reg query` into the values of the key it queried, by name */
 export function parseRegistryQuery(output: string): Map<string, string> {

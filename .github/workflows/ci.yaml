@@ -17,7 +17,7 @@ jobs:
             contents: read
         steps:
             - name: Install native dependencies
-              run: dnf install -y git gcc-c++ cmake make pkgconf-pkg-config gtk4-devel libadwaita-devel
+              run: dnf install -y git gcc-c++ cmake make pkgconf-pkg-config gtk4-devel libadwaita-devel ucrt64-gcc-c++
 
             - name: Checkout
               uses: actions/checkout@v5
@@ -44,3 +44,13 @@ jobs:
 
             - name: Test
               run: npm test
+
+            - name: Cache MSYS2 packages
+              uses: actions/cache@v4
+              with:
+                  path: node_modules/.cache/girbind/win32-x64/.cache
+                  key: msys2-${{ hashFiles('package.json') }}
+                  restore-keys: msys2-
+
+            - name: Build for Windows
+              run: npm run build:windows
