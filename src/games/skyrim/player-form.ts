@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib';
 import { decodeUTF8, encodeUTF8 } from 'utilium';
-import { Splice } from '../../splice.js';
+import { Splice } from '../../data/splice.js';
 import { Change, ChangeFormType, type ChangeForm } from './change-forms.js';
 
 /** The player's base form, whose change form has the player's name, race and sex */

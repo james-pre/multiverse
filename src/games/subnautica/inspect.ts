@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { copySave, type Edit, type EditOptions } from '../../editing.js';
-import { dateTimeToTicks, ticksToDateTime } from '../../dotnet.js';
+import { dateTimeToTicks, ticksToDateTime } from '../../data/dotnet.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, type Entry, type Inspection, type Row } from '../../inspection.js';
-import { JsonDocument } from '../../json.js';
-import { fieldEdit, messageEntries, numberOf } from '../../protobuf.js';
+import { JsonDocument } from '../../data/json.js';
+import { fieldEdit, messageEntries, numberOf } from '../../data/protobuf.js';
 import type { Inspector } from '../index.js';
 import { ObjectFile, SceneFile, type Component, type GameObject } from './objects.js';
 import { freeSlot, modeName, modes } from './slots.js';

@@ -1,5 +1,5 @@
-import { checkEditValue, type Edit, type EditOptions, type EditValue } from './editing.js';
-import { rangeEntries, valueEntry, type Entry } from './inspection.js';
+import { checkEditValue, type Edit, type EditOptions, type EditValue } from '../editing.js';
+import { rangeEntries, valueEntry, type Entry } from '../inspection.js';
 
 /** Where a value is in the text */
 interface Span {

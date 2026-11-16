@@ -1,6 +1,6 @@
 import { closeSync, openSync, readFileSync, readSync } from 'node:fs';
 import { decodeUTF8 } from 'utilium';
-import * as nrbf from '../../nrbf.js';
+import * as nrbf from '../../data/nrbf.js';
 
 export interface SessionTime extends nrbf.Instance {
 	/** Scaled by the game speed, in seconds */

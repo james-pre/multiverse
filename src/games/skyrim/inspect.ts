@@ -6,7 +6,7 @@ import { checkEditValue, copySave, namedChoices, propertyEdit, type Edit, type N
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
-import { Splice } from '../../splice.js';
+import { Splice } from '../../data/splice.js';
 import type { Inspector } from '../index.js';
 import { ChangeFormType } from './change-forms.js';
 import { formatString } from './format.js';

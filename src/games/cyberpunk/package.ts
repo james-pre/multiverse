@@ -10,7 +10,7 @@ import {
 	type EditValue,
 	type NumberType,
 } from '../../editing.js';
-import { Splice, type Offset } from '../../splice.js';
+import { Splice, type Offset } from '../../data/splice.js';
 import { Reader } from './reader.js';
 
 /* Reads REDengine packages, which serialize objects along with the names of their types and fields. */

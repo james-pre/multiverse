@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { numberOf, readFields, readVarint, textOf, type Field } from '../../protobuf.js';
+import { numberOf, readFields, readVarint, textOf, type Field } from '../../data/protobuf.js';
 
 /* Reads the objects Subnautica saves with `ProtobufSerializer`: length-prefixed messages for each object and its components. */
 

@@ -4,7 +4,7 @@ import { copySave, linkedEdit, type Edit } from '../../editing.js';
 import { formatValue, hoursAndMinutes } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
-import * as nrbf from '../../nrbf.js';
+import * as nrbf from '../../data/nrbf.js';
 import type { Inspector } from '../index.js';
 import { isSave, openContainer, savePath, type Resource, type SaveContainer } from './container.js';
 

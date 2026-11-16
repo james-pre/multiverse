@@ -3,7 +3,7 @@ import { basename, dirname, join } from 'node:path';
 import { copySave } from '../../editing.js';
 import { decodeUTF8 } from 'utilium';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
-import { ticksToDateTime } from '../../dotnet.js';
+import { ticksToDateTime } from '../../data/dotnet.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
 import type { Inspector } from '../index.js';

@@ -1,5 +1,5 @@
 import { closeSync, openSync, readFileSync, readSync, statSync } from 'node:fs';
-import { JsonDocument } from '../../json.js';
+import { JsonDocument } from '../../data/json.js';
 
 /** Header dates like `10/11/2026 21:58:04`, in UTC */
 const datePattern = /^(\d+)\/(\d+)\/(\d+) (\d+):(\d+):(\d+)$/;

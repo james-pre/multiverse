@@ -4,7 +4,7 @@ import type { Edit, EditOptions } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Entry, Inspection, Row } from '../../inspection.js';
-import { JsonDocument } from '../../json.js';
+import { JsonDocument } from '../../data/json.js';
 import type { Inspector } from '../index.js';
 import { money, rankName } from './names.js';
 import { readSaveFolder } from './save-file.js';

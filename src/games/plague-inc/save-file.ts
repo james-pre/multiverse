@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { decodeUTF8, encodeUTF8 } from 'utilium';
-import { compressLzf, decompressLzf } from '../../compression.js';
+import { compressLzf, decompressLzf } from '../../data/compression.js';
 import { checkEditValue, type Edit, type EditOptions } from '../../editing.js';
 
 /** Fields by name, from text with a `name:value` line for each */

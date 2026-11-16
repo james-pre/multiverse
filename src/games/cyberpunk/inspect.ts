@@ -5,7 +5,7 @@ import { binaryEdit, copySave, linkedEdit, namedChoices, type Edit } from '../..
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { rangeEntries, valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
-import { JsonDocument } from '../../json.js';
+import { JsonDocument } from '../../data/json.js';
 import type { Inspector } from '../index.js';
 import * as slots from './slots.js';
 import { factHash, readFacts } from './facts.js';

@@ -1,7 +1,7 @@
 /* eslint-disable no-control-regex */
 import { decodeUTF8 } from 'utilium';
-import { binaryEdit, checkEditValue, type Edit, type EditOptions } from './editing.js';
-import type { Entry } from './inspection.js';
+import { binaryEdit, checkEditValue, type Edit, type EditOptions } from '../editing.js';
+import type { Entry } from '../inspection.js';
 
 /* Reads protocol buffers without their schema, as fields with numbers and wire types. */
 

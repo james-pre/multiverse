@@ -1,7 +1,7 @@
 import * as io from 'ioium';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { ticksToDateTime } from '../../dotnet.js';
+import { ticksToDateTime } from '../../data/dotnet.js';
 import { shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import type { Save } from '../../save.js';

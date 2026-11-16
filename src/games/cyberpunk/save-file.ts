@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { encodeUTF8 } from 'utilium';
-import { compressLZ4, decompressLZ4 } from '../../compression.js';
+import { compressLZ4, decompressLZ4 } from '../../data/compression.js';
 import { readFactsTable } from './facts.js';
 import { Package } from './package.js';
 import { Reader } from './reader.js';

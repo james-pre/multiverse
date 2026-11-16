@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions */
 import { decodeUTF8 } from 'utilium';
-import { Locations, type NumberType } from './editing.js';
-import { valueEntry, type Entry } from './inspection.js';
+import { Locations, type NumberType } from '../editing.js';
+import { valueEntry, type Entry } from '../inspection.js';
 
 /* Reads the .NET Remoting Binary Format (MS-NRBF), which `BinaryFormatter` writes. */
 

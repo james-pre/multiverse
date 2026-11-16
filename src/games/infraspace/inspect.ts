@@ -4,7 +4,7 @@ import { copySave, type EditOptions } from '../../editing.js';
 import { formatValue, hoursAndMinutes, shortDate } from '../../format.js';
 import { text } from '../../i18n.js';
 import { valueEntry, type Entry, type Inspection, type Row } from '../../inspection.js';
-import type { JsonDocument } from '../../json.js';
+import type { JsonDocument } from '../../data/json.js';
 import type { Inspector } from '../index.js';
 import { isSave, openSave, type Header } from './save-file.js';
 

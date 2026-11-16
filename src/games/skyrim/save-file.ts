@@ -1,7 +1,7 @@
 import type { InstanceOf } from 'memium';
 import { closeSync, openSync, readFileSync, readSync, writeFileSync } from 'node:fs';
 import { deflateSync, inflateSync } from 'node:zlib';
-import { compressLZ4, decompressLZ4 } from '../../compression.js';
+import { compressLZ4, decompressLZ4 } from '../../data/compression.js';
 import type { Pixels } from '../../save.js';
 import { CompressionType, SaveBody, SaveHeader } from './structs.js';
 import { decodeUTF8, encodeUTF8 } from 'utilium';
