@@ -1,6 +1,6 @@
 {
 	"name": "@james-pre/multiverse",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "View game saves as branching timelines",
 	"type": "module",
 	"author": "James Prevett <jp@jamespre.dev> (https://jamespre.dev)",
