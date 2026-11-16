@@ -3,7 +3,7 @@ import { lstatSync, mkdtempSync, readlinkSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { installEntry, uninstallEntry, uninstallValues, windowsCommandLine } from '../src/desktop.js';
+import { installEntry, uninstallEntry, uninstallValues, windowsCommandLine } from '@james-pre/multiverse/desktop';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

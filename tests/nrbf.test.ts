@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { entryLines } from '../src/inspection.js';
-import * as nrbf from '../src/nrbf.js';
+import { entryLines } from '@james-pre/multiverse/inspection';
+import * as nrbf from '@james-pre/multiverse/data/nrbf';
 
 /** A 32-bit float member, since other numbers are written as 32-bit integers */
 export class Single {
-	public constructor(public readonly value: number) {}
+	public readonly value: number;
+
+	public constructor(value: number) {
+		this.value = value;
+	}
 }
 
 class Bytes {

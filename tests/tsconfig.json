@@ -1,9 +1,12 @@
 {
 	"extends": "../tsconfig.json",
 	"compilerOptions": {
-		"rootDir": "..",
-		"noEmit": true
+		"rootDir": ".",
+		"noEmit": true,
+		"erasableSyntaxOnly": true,
+		"verbatimModuleSyntax": true,
+		"allowImportingTsExtensions": true
 	},
-	"include": ["./**/*.ts", "../src/**/*.ts", "../src/.*.ts"],
-	"exclude": ["../src/gui"]
+	"include": ["./**/*.ts"],
+	"exclude": []
 }

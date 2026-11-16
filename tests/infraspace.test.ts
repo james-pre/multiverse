@@ -3,10 +3,10 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { infraspace } from '../src/games/infraspace/index.js';
-import { inspector } from '../src/games/infraspace/inspect.js';
-import { objectAfter, parseDate } from '../src/games/infraspace/save-file.js';
-import { Timeline } from '../src/timeline.js';
+import { infraspace } from '@james-pre/multiverse/games/infraspace/index';
+import { inspector } from '@james-pre/multiverse/games/infraspace/inspect';
+import { objectAfter, parseDate } from '@james-pre/multiverse/games/infraspace/save-file';
+import { Timeline } from '@james-pre/multiverse/timeline';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

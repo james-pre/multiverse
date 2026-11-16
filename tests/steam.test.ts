@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { suite, test } from 'node:test';
-import * as steam from '../src/steam.js';
+import * as steam from '@james-pre/multiverse/steam';
 
 suite('steam', () => {
 	test('parseKeyValues reads nested sections, escapes and comments', () => {

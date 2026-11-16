@@ -4,12 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { plagueInc } from '../src/games/plague-inc/index.js';
-import { inspector } from '../src/games/plague-inc/inspect.js';
-import { ticksToDateTime } from '../src/dotnet.js';
-import { decodeValue, readField, replaceField } from '../src/games/plague-inc/save-file.js';
-import { Timeline } from '../src/timeline.js';
-import { literalLzf } from './compression.test.js';
+import { plagueInc } from '@james-pre/multiverse/games/plague-inc/index';
+import { inspector } from '@james-pre/multiverse/games/plague-inc/inspect';
+import { ticksToDateTime } from '@james-pre/multiverse/data/dotnet';
+import { decodeValue, readField, replaceField } from '@james-pre/multiverse/games/plague-inc/save-file';
+import { Timeline } from '@james-pre/multiverse/timeline';
+import { literalLzf } from './compression.test.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

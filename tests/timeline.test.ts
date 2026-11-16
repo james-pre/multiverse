@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
-import { layoutTimeline } from '../src/layout.js';
-import type { Save } from '../src/save.js';
-import { Timeline } from '../src/timeline.js';
-import { Viewport } from '../src/viewport.js';
+import { layoutTimeline } from '@james-pre/multiverse/layout';
+import type { Save } from '@james-pre/multiverse/save';
+import { Timeline } from '@james-pre/multiverse/timeline';
+import { Viewport } from '@james-pre/multiverse/viewport';
 
 const epoch = Temporal.ZonedDateTime.from('2026-01-01T00:00[UTC]');
 

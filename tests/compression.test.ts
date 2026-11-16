@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
 import { encodeUTF8, decodeUTF8 } from 'utilium';
-import { compressLZ4, compressLzf, decompressLZ4, decompressLzf } from '../src/compression.js';
+import { compressLZ4, compressLzf, decompressLZ4, decompressLzf } from '@james-pre/multiverse/data/compression';
 
 /** An LZ4 block that stores all of `data` as literals */
 export function literalBlock(data: Uint8Array): Uint8Array {

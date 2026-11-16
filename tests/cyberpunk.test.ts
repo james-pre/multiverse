@@ -3,8 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { convertToManual, cyberpunk } from '../src/games/cyberpunk/index.js';
-import { parseTimestamp } from '../src/games/cyberpunk/metadata.js';
+import { convertToManual, cyberpunk } from '@james-pre/multiverse/games/cyberpunk/index';
+import { parseTimestamp } from '@james-pre/multiverse/games/cyberpunk/metadata';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

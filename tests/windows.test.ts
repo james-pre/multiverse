@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { suite, test } from 'node:test';
-import { expandEnvironment, parseRegistryQuery, profilePath } from '../src/windows.js';
+import { expandEnvironment, parseRegistryQuery, profilePath } from '@james-pre/multiverse/windows';
 
 suite('windows', () => {
 	const output = [

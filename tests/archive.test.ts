@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, suite, test } from 'node:test';
-import { Archive } from '../src/archive.js';
-import type { ArchiveSupport, Game } from '../src/games/index.js';
-import type { Save } from '../src/save.js';
+import { Archive } from '@james-pre/multiverse/archive';
+import type { ArchiveSupport, Game } from '@james-pre/multiverse/games/index';
+import type { Save } from '@james-pre/multiverse/save';
 
 interface Info {
 	playthrough: string;

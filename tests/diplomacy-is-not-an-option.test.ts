@@ -3,11 +3,11 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { diplomacyIsNotAnOption } from '../src/games/diplomacy-is-not-an-option/index.js';
-import { inspector } from '../src/games/diplomacy-is-not-an-option/inspect.js';
-import * as nrbf from '../src/nrbf.js';
-import { Timeline } from '../src/timeline.js';
-import { serialize, Single } from './nrbf.test.js';
+import { diplomacyIsNotAnOption } from '@james-pre/multiverse/games/diplomacy-is-not-an-option/index';
+import { inspector } from '@james-pre/multiverse/games/diplomacy-is-not-an-option/inspect';
+import * as nrbf from '@james-pre/multiverse/data/nrbf';
+import { Timeline } from '@james-pre/multiverse/timeline';
+import { serialize, Single } from './nrbf.test.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

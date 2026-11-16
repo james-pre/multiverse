@@ -4,11 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { binaryEdit } from '../src/editing.js';
-import { factHash, readFacts } from '../src/games/cyberpunk/facts.js';
-import { typeName } from '../src/games/cyberpunk/package.js';
-import { SaveFile, unpackDateTime } from '../src/games/cyberpunk/save-file.js';
-import { literalBlock } from './compression.test.js';
+import { binaryEdit } from '@james-pre/multiverse/editing';
+import { factHash, readFacts } from '@james-pre/multiverse/games/cyberpunk/facts';
+import { typeName } from '@james-pre/multiverse/games/cyberpunk/package';
+import { SaveFile, unpackDateTime } from '@james-pre/multiverse/games/cyberpunk/save-file';
+import { literalBlock } from './compression.test.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

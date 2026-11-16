@@ -3,11 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
-import { Archive } from '../src/archive.js';
-import { scheduleI } from '../src/games/schedule-i/index.js';
-import { inspector } from '../src/games/schedule-i/inspect.js';
-import { rankName } from '../src/games/schedule-i/names.js';
-import { Timeline } from '../src/timeline.js';
+import { Archive } from '@james-pre/multiverse/archive';
+import { scheduleI } from '@james-pre/multiverse/games/schedule-i/index';
+import { inspector } from '@james-pre/multiverse/games/schedule-i/inspect';
+import { rankName } from '@james-pre/multiverse/games/schedule-i/names';
+import { Timeline } from '@james-pre/multiverse/timeline';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

@@ -4,11 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { parseEditValue } from '../src/editing.js';
-import { skyrim } from '../src/games/skyrim/index.js';
-import { parsePlayTime } from '../src/games/skyrim/strings.js';
-import { inspector } from '../src/games/skyrim/inspect.js';
-import { literalBlock } from './compression.test.js';
+import { parseEditValue } from '@james-pre/multiverse/editing';
+import { skyrim } from '@james-pre/multiverse/games/skyrim/index';
+import { parsePlayTime } from '@james-pre/multiverse/games/skyrim/strings';
+import { inspector } from '@james-pre/multiverse/games/skyrim/inspect';
+import { literalBlock } from './compression.test.ts';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

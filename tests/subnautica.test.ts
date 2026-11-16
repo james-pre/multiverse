@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, suite, test } from 'node:test';
 import { encodeUTF8 } from 'utilium';
-import { subnautica } from '../src/games/subnautica/index.js';
-import { inspector } from '../src/games/subnautica/inspect.js';
-import { fieldEdit, readFields } from '../src/protobuf.js';
+import { subnautica } from '@james-pre/multiverse/games/subnautica/index';
+import { inspector } from '@james-pre/multiverse/games/subnautica/inspect';
+import { fieldEdit, readFields } from '@james-pre/multiverse/data/protobuf';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));

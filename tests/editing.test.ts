@@ -14,9 +14,9 @@ import {
 	parseEditValue,
 	propertyEdit,
 	type Edit,
-} from '../src/editing.js';
-import { JsonDocument } from '../src/json.js';
-import { Splice, type Offset } from '../src/splice.js';
+} from '@james-pre/multiverse/editing';
+import { JsonDocument } from '@james-pre/multiverse/data/json';
+import { Splice, type Offset } from '@james-pre/multiverse/data/splice';
 
 const directory = mkdtempSync(join(tmpdir(), 'multiverse-'));
 after(() => rmSync(directory, { recursive: true, force: true }));
